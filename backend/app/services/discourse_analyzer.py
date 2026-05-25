@@ -1,19 +1,19 @@
 """
-Pilier 3 — Analyse du discours par LLM (Claude API).
+Pilier 3 - Analyse du discours par LLM (Claude API).
 
-Détecte les signaux de manipulation rhétorique, FOMO, fausses promesses,
+Detecte les signaux de manipulation rhetorique, FOMO, fausses promesses,
 et langage de secte dans les contenus textuels.
 
 Requiert : ANTHROPIC_API_KEY dans .env
 """
 
 import json
-from dataclasses import dataclass, field
-from typing import Optional
 
 from app.config import ANTHROPIC_API_KEY
+from app.services.discourse_models import DiscourseResult, DiscourseSignal
 
 _MODEL = "claude-haiku-4-5-20251001"
+_MAX_WORDS = 3000
 
 _SYSTEM_PROMPT = """Tu es un expert en détection de manipulation rhétorique et de désinformation.
 Analyse le texte fourni et retourne UNIQUEMENT un JSON valide avec cette structure exacte :
@@ -40,52 +40,44 @@ Sois factuel et précis. Si le texte est banal et sans signal, retourne manipula
 """
 
 
-@dataclass
-class DiscourseSignal:
-    type: str
-    quote: str
-    explanation: str
-
-    def to_dict(self) -> dict:
-        return {"type": self.type, "quote": self.quote, "explanation": self.explanation}
+def _truncate(text: str) -> str:
+    words = text.split()
+    if len(words) > _MAX_WORDS:
+        return " ".join(words[:_MAX_WORDS]) + "\n[...texte tronque]"
+    return text
 
 
-@dataclass
-class DiscourseResult:
-    manipulation_score: int
-    signals: list[DiscourseSignal] = field(default_factory=list)
-    summary: str = ""
-    verdict: str = "safe"
-    warning: Optional[str] = None
-    available: bool = True
+def _parse_response(raw: str) -> DiscourseResult:
+    """Extrait le JSON meme si le modele ajoute du texte autour."""
+    start = raw.find("{")
+    end = raw.rfind("}") + 1
+    data = json.loads(raw[start:end])
 
-    def to_dict(self) -> dict:
-        return {
-            "manipulation_score": self.manipulation_score,
-            "signals": [s.to_dict() for s in self.signals],
-            "summary": self.summary,
-            "verdict": self.verdict,
-            "warning": self.warning,
-            "available": self.available,
-        }
+    signals = [
+        DiscourseSignal(
+            type=s.get("type", ""),
+            quote=s.get("quote", ""),
+            explanation=s.get("explanation", ""),
+        )
+        for s in data.get("signals", [])
+    ]
+
+    return DiscourseResult(
+        manipulation_score=int(data.get("manipulation_score", 0)),
+        signals=signals,
+        summary=data.get("summary", ""),
+        verdict=data.get("verdict", "safe"),
+    )
 
 
 async def analyze_discourse(text: str) -> DiscourseResult:
-    """
-    Analyse un texte via Claude pour détecter les signaux de manipulation.
-
-    Args:
-        text: Contenu textuel à analyser (max ~4000 mots).
-
-    Returns:
-        DiscourseResult avec score, signaux et verdict.
-    """
+    """Analyse un texte via Claude pour detecter les signaux de manipulation."""
     if not ANTHROPIC_API_KEY:
         return DiscourseResult(
             manipulation_score=0,
             summary="",
             verdict="safe",
-            warning="Clé ANTHROPIC_API_KEY non configurée. Analyse du discours indisponible.",
+            warning="Cle ANTHROPIC_API_KEY non configuree. Analyse du discours indisponible.",
             available=False,
         )
 
@@ -96,11 +88,6 @@ async def analyze_discourse(text: str) -> DiscourseResult:
             verdict="safe",
         )
 
-    # Tronquer à ~3000 mots pour rester dans les limites raisonnables
-    words = text.split()
-    if len(words) > 3000:
-        text = " ".join(words[:3000]) + "\n[...texte tronqué]"
-
     try:
         import anthropic
         client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
@@ -108,30 +95,9 @@ async def analyze_discourse(text: str) -> DiscourseResult:
             model=_MODEL,
             max_tokens=1024,
             system=_SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": f"Analyse ce texte :\n\n{text}"}],
+            messages=[{"role": "user", "content": f"Analyse ce texte :\n\n{_truncate(text)}"}],
         )
-
-        raw = message.content[0].text.strip()
-        # Extraire le JSON même si le modèle ajoute du texte autour
-        start = raw.find("{")
-        end = raw.rfind("}") + 1
-        data = json.loads(raw[start:end])
-
-        signals = [
-            DiscourseSignal(
-                type=s.get("type", ""),
-                quote=s.get("quote", ""),
-                explanation=s.get("explanation", ""),
-            )
-            for s in data.get("signals", [])
-        ]
-
-        return DiscourseResult(
-            manipulation_score=int(data.get("manipulation_score", 0)),
-            signals=signals,
-            summary=data.get("summary", ""),
-            verdict=data.get("verdict", "safe"),
-        )
+        return _parse_response(message.content[0].text.strip())
 
     except Exception as e:
         return DiscourseResult(

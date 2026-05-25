@@ -1,0 +1,51 @@
+"""Modeles de donnees du pilier 1 - Identite legale (data.gouv.fr)."""
+
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class LegalIdentity:
+    """Informations legales d'une entite trouvee sur data.gouv.fr."""
+
+    siren: str
+    nom: str
+    est_actif: bool
+    date_creation: Optional[str]
+    date_fermeture: Optional[str]
+    forme_juridique: Optional[str]
+    adresse: Optional[str]
+    est_entrepreneur_individuel: bool
+    source_url: str
+
+    def to_dict(self) -> dict:
+        return {
+            "siren": self.siren,
+            "nom": self.nom,
+            "est_actif": self.est_actif,
+            "date_creation": self.date_creation,
+            "date_fermeture": self.date_fermeture,
+            "forme_juridique": self.forme_juridique,
+            "adresse": self.adresse,
+            "est_entrepreneur_individuel": self.est_entrepreneur_individuel,
+            "source": "Annuaire des Entreprises (data.gouv.fr)",
+            "source_url": self.source_url,
+        }
+
+
+@dataclass
+class LegalCheckResult:
+    """Resultat complet de la verification d'identite legale."""
+
+    found: bool
+    identity: Optional[LegalIdentity]
+    query_used: str
+    warning: Optional[str]
+
+    def to_dict(self) -> dict:
+        return {
+            "found": self.found,
+            "identity": self.identity.to_dict() if self.identity else None,
+            "query_used": self.query_used,
+            "warning": self.warning,
+        }

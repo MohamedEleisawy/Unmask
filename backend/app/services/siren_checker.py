@@ -8,69 +8,16 @@ Pas de cle API requise - API publique et gratuite.
 Source : https://recherche-entreprises.api.gouv.fr
 """
 
-import httpx
-from dataclasses import dataclass
 from typing import Optional
 
+import httpx
+
+from app.services.siren_models import LegalCheckResult, LegalIdentity
+
 _API_BASE = "https://recherche-entreprises.api.gouv.fr/search"
-_TIMEOUT = 8  # secondes
+_TIMEOUT = 8
 
-
-# ---------------------------------------------------------------------------
-# Modele de donnees
-# ---------------------------------------------------------------------------
-
-@dataclass
-class LegalIdentity:
-    """Informations legales d'une entite trouvee sur data.gouv.fr."""
-
-    siren: str
-    nom: str
-    est_actif: bool              # True si etat_administratif == "A"
-    date_creation: Optional[str]
-    date_fermeture: Optional[str]
-    forme_juridique: Optional[str]
-    adresse: Optional[str]
-    est_entrepreneur_individuel: bool
-    source_url: str
-
-    def to_dict(self) -> dict:
-        return {
-            "siren": self.siren,
-            "nom": self.nom,
-            "est_actif": self.est_actif,
-            "date_creation": self.date_creation,
-            "date_fermeture": self.date_fermeture,
-            "forme_juridique": self.forme_juridique,
-            "adresse": self.adresse,
-            "est_entrepreneur_individuel": self.est_entrepreneur_individuel,
-            "source": "Annuaire des Entreprises (data.gouv.fr)",
-            "source_url": self.source_url,
-        }
-
-
-@dataclass
-class LegalCheckResult:
-    """Resultat complet de la verification d'identite legale."""
-
-    found: bool                       # L'entite existe-t-elle dans le registre ?
-    identity: Optional[LegalIdentity] # Donnees si trouvee
-    query_used: str                    # Ce qui a ete recherche (transparence)
-    warning: Optional[str]
-
-    def to_dict(self) -> dict:
-        return {
-            "found": self.found,
-            "identity": self.identity.to_dict() if self.identity else None,
-            "query_used": self.query_used,
-            "warning": self.warning,
-        }
-
-
-# ---------------------------------------------------------------------------
 # Mapping des codes nature juridique (les plus courants)
-# ---------------------------------------------------------------------------
-
 _NATURE_JURIDIQUE = {
     "1000": "Entrepreneur individuel",
     "5499": "Societe a responsabilite limitee (SARL)",
@@ -82,18 +29,14 @@ _NATURE_JURIDIQUE = {
     "9220": "Commune",
 }
 
+
 def _libelle_nature_juridique(code: Optional[str]) -> Optional[str]:
-    """Traduit un code nature juridique en libelle lisible."""
     if not code:
         return None
     return _NATURE_JURIDIQUE.get(code, f"Code {code}")
 
 
-# ---------------------------------------------------------------------------
-# Appel API
-# ---------------------------------------------------------------------------
-
-def _parse_result(data: dict, query: str) -> LegalIdentity:
+def _parse_result(data: dict) -> LegalIdentity:
     """Extrait les champs utiles d'un resultat brut de l'API."""
     siege = data.get("siege") or {}
     complements = data.get("complements") or {}
@@ -117,19 +60,10 @@ async def check_legal_identity(
     siren: Optional[str] = None,
 ) -> LegalCheckResult:
     """
-    Verifie l'identite legale d'une entite via l'API data.gouv.fr.
+    Verifie l'identite legale via data.gouv.fr.
 
-    Priorite : si un SIREN est fourni (INPUT_4), on cherche par SIREN.
-    Sinon, on cherche par nom d'entite (INPUT_2).
-
-    Args:
-        entity_name : Nom public de la personne ou marque (INPUT_2).
-        siren       : Numero SIREN a 9 chiffres (INPUT_4).
-
-    Returns:
-        LegalCheckResult indiquant si l'entite est enregistree et active.
+    Priorite : SIREN si fourni, sinon nom d'entite.
     """
-    # Choix de la requete : SIREN en priorite car plus precis
     if siren:
         query = siren.strip().replace(" ", "")
     elif entity_name:
@@ -142,7 +76,6 @@ async def check_legal_identity(
             warning="Aucun parametre fourni (entity_name ou siren requis).",
         )
 
-    # Appel API asynchrone
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
         response = await client.get(_API_BASE, params={"q": query, "per_page": 1})
         response.raise_for_status()
@@ -150,7 +83,6 @@ async def check_legal_identity(
 
     results = data.get("results", [])
 
-    # Aucun resultat
     if not results:
         warning = None
         if not siren:
@@ -160,10 +92,7 @@ async def check_legal_identity(
             )
         return LegalCheckResult(found=False, identity=None, query_used=query, warning=warning)
 
-    # On prend le premier resultat (le plus pertinent selon l'API)
-    identity = _parse_result(results[0], query)
-
-    # Avertissement si la societe est fermee
+    identity = _parse_result(results[0])
     warning = None
     if not identity.est_actif:
         warning = f"La societe '{identity.nom}' existe dans le registre mais est fermee (radiation)."

@@ -1,69 +1,26 @@
 """
 Verification AMF/ACPR - Liste noire ABE Infoservice.
 
-Ce module verifie si une entite (influenceur, marque, site) apparait
-dans la liste noire officielle AMF/ACPR.
-
 LIMITE CONNUE : La liste AMF recense des domaines, emails et noms de societes.
-Elle ne contient PAS les noms/prenoms de personnes physiques. Un influenceur
-agissant en nom propre (sans societe declaree) n'y sera donc generalement pas.
+Elle ne contient PAS les noms/prenoms de personnes physiques.
 
 Source : https://www.abe-infoservice.fr/liste-noire
 """
 
 import csv
 import unicodedata
-from dataclasses import dataclass
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
+from app.services.amf_models import AmfMatch, ComplianceResult
+
 _CSV_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "abeis-liste-noire.csv"
 
 
 # ---------------------------------------------------------------------------
-# Modele de donnees
-# ---------------------------------------------------------------------------
-
-@dataclass(frozen=True)
-class AmfMatch:
-    """Une correspondance trouvee dans la liste noire AMF."""
-    matched_on: str          # Ce qui a declenche le match : "url" ou "denomination"
-    matched_value: str       # La valeur exacte trouvee dans le CSV
-    categories: list[str]    # Ex. ["Forex"], ["Crypto-actifs"], ["Usurpation Autorites"]
-    date_added: Optional[date]
-
-    def to_dict(self) -> dict:
-        return {
-            "matched_on": self.matched_on,
-            "matched_value": self.matched_value,
-            "categories": self.categories,
-            "date_added": self.date_added.isoformat() if self.date_added else None,
-            "source": "ABE Infoservice (AMF/ACPR)",
-            "source_url": "https://www.abe-infoservice.fr/liste-noire",
-        }
-
-
-@dataclass
-class ComplianceResult:
-    """Resultat complet de la verification AMF pour une entite."""
-    is_blacklisted: bool
-    matches: list[AmfMatch]
-    checked: dict           # Ce qui a ete verifie (pour la transparence)
-    warning: Optional[str]  # Avertissement si la verification est incomplete
-
-    def to_dict(self) -> dict:
-        return {
-            "is_blacklisted": self.is_blacklisted,
-            "matches": [m.to_dict() for m in self.matches],
-            "checked": self.checked,
-            "warning": self.warning,
-        }
-
-
-# ---------------------------------------------------------------------------
-# Chargement du CSV
+# Helpers de normalisation
 # ---------------------------------------------------------------------------
 
 def _normalize(text: str) -> str:
@@ -75,12 +32,7 @@ def _normalize(text: str) -> str:
 
 
 def _extract_hostname(url_or_email: str) -> str:
-    """
-    Extrait le hostname depuis une URL ou un email.
-    Exemples :
-      "sites.google.com/arnaque" -> "sites.google.com"
-      "contact@fafinancesarl.com" -> "fafinancesarl.com"
-    """
+    """Extrait le hostname depuis une URL ou un email."""
     text = _normalize(url_or_email)
     if "@" in text:
         text = text.split("@")[-1]
@@ -88,7 +40,6 @@ def _extract_hostname(url_or_email: str) -> str:
 
 
 def _parse_date(raw: str) -> Optional[date]:
-    """Parse une date JJ/MM/AAAA. Retourne None si invalide."""
     try:
         day, month, year = raw.strip().split("/")
         return date(int(year), int(month), int(day))
@@ -96,12 +47,13 @@ def _parse_date(raw: str) -> Optional[date]:
         return None
 
 
+# ---------------------------------------------------------------------------
+# Chargement du CSV (cache LRU)
+# ---------------------------------------------------------------------------
+
 @lru_cache(maxsize=1)
 def _load_blacklist() -> list[dict]:
-    """
-    Charge le CSV une seule fois en memoire (cache LRU).
-    Chaque entree est un dict brut : {hostname, denomination, categories, date_added}.
-    """
+    """Charge le CSV une seule fois en memoire."""
     if not _CSV_PATH.exists():
         raise FileNotFoundError(
             f"Fichier AMF introuvable : {_CSV_PATH}\n"
@@ -124,6 +76,67 @@ def _load_blacklist() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
+# Matching
+# ---------------------------------------------------------------------------
+
+def _match_by_url(blacklist: list[dict], url: Optional[str]) -> tuple[list[AmfMatch], Optional[str]]:
+    if not url:
+        return [], None
+    query = _extract_hostname(url)
+    matches = [
+        AmfMatch(
+            matched_on="url",
+            matched_value=e["raw_value"],
+            categories=e["categories"],
+            date_added=e["date_added"],
+        )
+        for e in blacklist if e["hostname"] == query
+    ]
+    return matches, query
+
+
+def _match_by_name(
+    blacklist: list[dict], name: Optional[str], already: list[AmfMatch],
+) -> tuple[list[AmfMatch], Optional[str]]:
+    if not name:
+        return [], None
+    query = _normalize(name)
+    existing_values = {m.matched_value for m in already}
+    matches = [
+        AmfMatch(
+            matched_on="denomination",
+            matched_value=e["raw_value"],
+            categories=e["categories"],
+            date_added=e["date_added"],
+        )
+        for e in blacklist
+        if e["denomination"] and query in e["denomination"] and e["raw_value"] not in existing_values
+    ]
+    return matches, query
+
+
+def _build_warning(
+    url: Optional[str], entity_name: Optional[str], sector: Optional[str],
+) -> Optional[str]:
+    financial_sectors = {"finance", "crypto", "forex", "investissement", "trading", "placement"}
+    is_financial = sector and any(s in _normalize(sector) for s in financial_sectors)
+
+    if not url and not entity_name:
+        return "Aucune donnee fournie pour la verification AMF."
+    if not is_financial and sector:
+        return (
+            f"Secteur '{sector}' non-financier : la liste noire AMF est principalement "
+            "destinee aux escroqueries financieres. L'absence de resultat ne garantit pas la fiabilite."
+        )
+    if entity_name and not url:
+        return (
+            "La liste AMF ne recense pas les personnes physiques par leur nom. "
+            "La recherche par nom ne fonctionne que pour les societes declarees."
+        )
+    return None
+
+
+# ---------------------------------------------------------------------------
 # Fonction principale
 # ---------------------------------------------------------------------------
 
@@ -137,77 +150,30 @@ def check_compliance(
     Verifie une entite contre la liste noire AMF/ACPR.
 
     Args:
-        url         : INPUT_1 - URL ou profil reseau social de l'entite.
-        entity_name : INPUT_2 - Nom public de la personne ou de la marque.
-        sector      : INPUT_3 - Secteur declare ("finance", "coaching", etc.)
-                      Si le secteur est non-financier (lifestyle, sport...),
-                      un avertissement l'indique car la liste AMF est moins pertinente.
-        siren       : INPUT_4 - SIREN optionnel. Non present dans le fichier AMF,
-                      ce champ est reserve pour la verification data.gouv.fr (pilier 1).
-
-    Returns:
-        ComplianceResult avec tous les matches et les champs verifies.
+        url         : URL ou profil reseau social.
+        entity_name : Nom public de la personne ou de la marque.
+        sector      : Secteur declare (ex. "finance", "coaching"...).
+        siren       : SIREN optionnel (non present dans la liste AMF).
     """
     blacklist = _load_blacklist()
-    matches: list[AmfMatch] = []
 
-    # -- Verification via URL (INPUT_1) --
-    query_hostname = _extract_hostname(url) if url else None
-    if query_hostname:
-        for entry in blacklist:
-            if entry["hostname"] == query_hostname:
-                matches.append(AmfMatch(
-                    matched_on="url",
-                    matched_value=entry["raw_value"],
-                    categories=entry["categories"],
-                    date_added=entry["date_added"],
-                ))
+    url_matches, url_query = _match_by_url(blacklist, url)
+    name_matches, name_query = _match_by_name(blacklist, entity_name, url_matches)
+    matches = url_matches + name_matches
 
-    # -- Verification via nom d'entite (INPUT_2) --
-    # Fonctionne uniquement pour les societes (pas les personnes physiques)
-    query_name = _normalize(entity_name) if entity_name else None
-    if query_name:
-        for entry in blacklist:
-            if entry["denomination"] and query_name in entry["denomination"]:
-                # Eviter les doublons si l'URL a deja matche la meme entree
-                already_matched = any(m.matched_value == entry["raw_value"] for m in matches)
-                if not already_matched:
-                    matches.append(AmfMatch(
-                        matched_on="denomination",
-                        matched_value=entry["raw_value"],
-                        categories=entry["categories"],
-                        date_added=entry["date_added"],
-                    ))
-
-    # -- Avertissement contextuel selon le secteur (INPUT_3) --
-    financial_sectors = {"finance", "crypto", "forex", "investissement", "trading", "placement"}
-    is_financial = sector and any(s in _normalize(sector) for s in financial_sectors)
-
-    warning = None
-    if not url and not entity_name:
-        warning = "Aucune donnee fournie pour la verification AMF."
-    elif not is_financial and sector:
-        warning = (
-            f"Secteur '{sector}' non-financier : la liste noire AMF est principalement "
-            "destinee aux escroqueries financieres. L'absence de resultat ne garantit pas la fiabilite."
-        )
-    elif entity_name and not url:
-        warning = (
-            "La liste AMF ne recense pas les personnes physiques par leur nom. "
-            "La recherche par nom ne fonctionne que pour les societes declarees."
-        )
-
-    # SIREN note (INPUT_4 - non verifiable ici)
     checked = {
-        "url_checked": query_hostname,
-        "entity_name_checked": query_name,
+        "url_checked": url_query,
+        "entity_name_checked": name_query,
         "sector": sector,
-        "siren_note": "SIREN absent de la liste AMF - a verifier via data.gouv.fr (pilier Identite Legale)" if siren else None,
+        "siren_note": (
+            "SIREN absent de la liste AMF - a verifier via data.gouv.fr (pilier Identite Legale)"
+            if siren else None
+        ),
     }
 
     return ComplianceResult(
         is_blacklisted=len(matches) > 0,
         matches=matches,
         checked=checked,
-        warning=warning,
+        warning=_build_warning(url, entity_name, sector),
     )
