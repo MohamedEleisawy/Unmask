@@ -1,16 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import type { AuditResponse } from "@/app/page";
-
-const API = "http://localhost:8000";
+import { Spinner } from "@/shared/ui/Spinner";
+import { fetchFullAudit } from "./api";
+import type { AuditResponse } from "./types";
 
 type Props = {
   onResults: (r: AuditResponse) => void;
   onReset: () => void;
 };
 
-export default function AuditForm({ onResults, onReset }: Props) {
+export function AuditForm({ onResults, onReset }: Props) {
   const [query, setQuery] = useState("");
   const [siren, setSiren] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
@@ -32,25 +32,14 @@ export default function AuditForm({ onResults, onReset }: Props) {
 
     try {
       const isUrl = query.startsWith("http") || query.includes(".");
-      const res = await fetch(`${API}/audit/full`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          entity_name: !isUrl ? query || undefined : undefined,
-          url: isUrl ? query || undefined : undefined,
-          siren: siren || undefined,
-          youtube_url: youtubeUrl || undefined,
-          sector,
-          text_to_analyze: text || undefined,
-        }),
+      const data = await fetchFullAudit({
+        entity_name: !isUrl ? query || undefined : undefined,
+        url: isUrl ? query || undefined : undefined,
+        siren: siren || undefined,
+        youtube_url: youtubeUrl || undefined,
+        sector,
+        text_to_analyze: text || undefined,
       });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.detail || "Erreur serveur");
-      }
-
-      const data: AuditResponse = await res.json();
       onResults(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Impossible de contacter l'API.");
@@ -64,7 +53,6 @@ export default function AuditForm({ onResults, onReset }: Props) {
       onSubmit={submit}
       className="w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-2xl flex flex-col gap-4"
     >
-      {/* Omnibox */}
       <div className="relative">
         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
           <SearchIcon />
@@ -79,10 +67,8 @@ export default function AuditForm({ onResults, onReset }: Props) {
         />
       </div>
 
-      {/* Champs rapides */}
       <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="text-xs text-gray-500 mb-1 block uppercase tracking-wider">SIREN</label>
+        <Field label="SIREN">
           <input
             type="text"
             placeholder="503932568"
@@ -90,9 +76,8 @@ export default function AuditForm({ onResults, onReset }: Props) {
             onChange={(e) => setSiren(e.target.value.replace(/\D/g, "").slice(0, 9))}
             className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
-        </div>
-        <div>
-          <label className="text-xs text-gray-500 mb-1 block uppercase tracking-wider">Secteur</label>
+        </Field>
+        <Field label="Secteur">
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}
@@ -104,10 +89,9 @@ export default function AuditForm({ onResults, onReset }: Props) {
             <option value="lifestyle">Lifestyle</option>
             <option value="autre">Autre</option>
           </select>
-        </div>
+        </Field>
       </div>
 
-      {/* Options avancées */}
       <button
         type="button"
         onClick={() => setShowAdvanced(!showAdvanced)}
@@ -119,8 +103,7 @@ export default function AuditForm({ onResults, onReset }: Props) {
 
       {showAdvanced && (
         <div className="flex flex-col gap-3 border-t border-gray-800 pt-4">
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block uppercase tracking-wider">URL chaîne YouTube</label>
+          <Field label="URL chaîne YouTube">
             <input
               type="text"
               placeholder="https://youtube.com/@handle"
@@ -128,11 +111,8 @@ export default function AuditForm({ onResults, onReset }: Props) {
               onChange={(e) => setYoutubeUrl(e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
-          </div>
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block uppercase tracking-wider">
-              Texte à analyser (description, post, email…)
-            </label>
+          </Field>
+          <Field label="Texte à analyser (description, post, email…)">
             <textarea
               rows={4}
               placeholder="Collez ici un texte suspect pour détecter la manipulation et vérifier la conformité loi 2023..."
@@ -140,7 +120,7 @@ export default function AuditForm({ onResults, onReset }: Props) {
               onChange={(e) => setText(e.target.value)}
               className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
             />
-          </div>
+          </Field>
         </div>
       )}
 
@@ -151,16 +131,18 @@ export default function AuditForm({ onResults, onReset }: Props) {
         disabled={loading}
         className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition-colors rounded-xl py-3 font-semibold text-sm cursor-pointer"
       >
-        {loading ? (
-          <span className="flex items-center justify-center gap-2">
-            <span className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full inline-block" />
-            Audit en cours…
-          </span>
-        ) : (
-          "Lancer l'audit complet"
-        )}
+        {loading ? <Spinner label="Audit en cours…" /> : "Lancer l'audit complet"}
       </button>
     </form>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="text-xs text-gray-500 mb-1 block uppercase tracking-wider">{label}</label>
+      {children}
+    </div>
   );
 }
 
