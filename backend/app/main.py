@@ -25,8 +25,8 @@ app = FastAPI(
 # CORS - restreindre en production (jamais * en prod)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_methods=["POST", "GET"],
+    allow_origins=["*"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
