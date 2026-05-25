@@ -44,7 +44,7 @@ Deux terminaux en parallèle :
 ```bash
 # Terminal 1 — backend (http://localhost:8000)
 cd backend
-uvicorn app.main:app --reload
+python -m uvicorn app.main:app --reload
 
 # Terminal 2 — frontend (http://localhost:3000)
 cd frontend
