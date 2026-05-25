@@ -13,17 +13,19 @@ export default function Home() {
   const [mode, setMode] = useState<Mode>("audit");
 
   return (
-    <main className="min-h-screen bg-gray-950 text-white flex flex-col items-center px-4 py-10">
-      <Header mode={mode} onModeChange={setMode} />
+    <main className="min-h-[100dvh] w-full max-w-[1100px] mx-auto px-6 md:px-12 py-10 md:py-16 flex flex-col">
+      <Header mode={mode} onModeChange={(m) => { setMode(m); setResults(null); }} />
 
-      {mode === "audit" ? (
-        <>
-          <AuditForm onResults={setResults} onReset={() => setResults(null)} />
-          {results && <AuditDashboard results={results} />}
-        </>
-      ) : (
-        <ManualAnalysis />
-      )}
+      <div className="mt-16 md:mt-24">
+        {mode === "audit" ? (
+          <>
+            <AuditForm onResults={setResults} onReset={() => setResults(null)} />
+            {results && <AuditDashboard results={results} />}
+          </>
+        ) : (
+          <ManualAnalysis />
+        )}
+      </div>
 
       <Footer />
     </main>
@@ -32,21 +34,26 @@ export default function Home() {
 
 function Header({ mode, onModeChange }: { mode: Mode; onModeChange: (m: Mode) => void }) {
   return (
-    <header className="mb-10 text-center">
-      <div className="flex items-center justify-center gap-3 mb-3">
-        <span className="text-3xl font-black tracking-tight text-white">
-          Un<span className="text-indigo-400">mask</span>
-        </span>
-        <span className="text-xs bg-indigo-900 text-indigo-300 px-2 py-0.5 rounded-full font-medium">v2.0</span>
+    <header className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 items-start md:items-end pb-6 border-b border-[var(--color-line)]">
+      <div className="flex flex-col gap-2">
+        <div className="flex items-baseline gap-2">
+          <span className="text-3xl font-medium tracking-tighter text-[var(--color-fg)]">
+            Unmask
+          </span>
+          <span className="num text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">
+            v2.0
+          </span>
+        </div>
+        <p className="text-xs text-[var(--color-fg-subtle)] max-w-[44ch] leading-relaxed">
+          Audit de crédibilité factuel — identité légale, conformité AMF/ACPR,
+          analyse de discours, engagement, réputation publique.
+        </p>
       </div>
-      <p className="text-gray-400 text-sm max-w-md">
-        Audit de crédibilité IA — identité légale, conformité AMF, analyse du discours, engagement, réputation.
-      </p>
 
-      <div className="flex mt-6 gap-2 justify-center">
+      <nav className="flex gap-px bg-[var(--color-line)] p-px rounded-md self-start md:self-end">
         <ModeButton active={mode === "audit"} onClick={() => onModeChange("audit")} label="Audit d'entité" />
         <ModeButton active={mode === "manual"} onClick={() => onModeChange("manual")} label="Analyse de texte" />
-      </div>
+      </nav>
     </header>
   );
 }
@@ -55,8 +62,10 @@ function ModeButton({ active, onClick, label }: { active: boolean; onClick: () =
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-        active ? "bg-indigo-600 text-white" : "bg-gray-800 text-gray-400 hover:text-white"
+      className={`px-3.5 py-1.5 rounded text-xs font-medium transition-colors ${
+        active
+          ? "bg-[var(--color-surface-raised)] text-[var(--color-fg)]"
+          : "bg-transparent text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]"
       }`}
     >
       {label}
@@ -66,9 +75,9 @@ function ModeButton({ active, onClick, label }: { active: boolean; onClick: () =
 
 function Footer() {
   return (
-    <footer className="mt-16 text-center text-gray-600 text-xs max-w-lg">
-      Aucun verdict définitif. Données issues de sources publiques officielles.
-      Pas de stockage de données personnelles (RGPD).
+    <footer className="mt-auto pt-20 grid grid-cols-1 md:grid-cols-2 gap-3 text-[11px] text-[var(--color-fg-faint)] leading-relaxed">
+      <p>Aucun verdict définitif. Sources publiques officielles uniquement.</p>
+      <p className="md:text-right">Zéro stockage de données personnelles — conforme RGPD.</p>
     </footer>
   );
 }

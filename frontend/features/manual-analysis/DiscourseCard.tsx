@@ -1,73 +1,74 @@
 import type { DiscourseResult } from "./types";
 
-const VERDICT_LABEL: Record<DiscourseResult["verdict"], { text: string; tone: string }> = {
-  safe: { text: "Sain", tone: "bg-green-900/40 text-green-300 border-green-700" },
-  suspicious: { text: "Suspect", tone: "bg-yellow-900/40 text-yellow-300 border-yellow-700" },
-  manipulative: { text: "Manipulatoire", tone: "bg-red-900/40 text-red-300 border-red-700" },
+const VERDICT: Record<DiscourseResult["verdict"], { text: string; color: string }> = {
+  safe: { text: "Sain", color: "var(--color-accent)" },
+  suspicious: { text: "Suspect", color: "var(--color-warn)" },
+  manipulative: { text: "Manipulatoire", color: "var(--color-bad)" },
 };
 
 export function DiscourseCard({ result }: { result: DiscourseResult }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
-      <Header />
+    <section className="grid grid-cols-[auto_1fr] gap-x-10 gap-y-3 py-8 border-t border-[var(--color-line)]">
+      <span className="num text-2xl text-[var(--color-fg-faint)] leading-none mt-0.5">03</span>
+      <div className="flex flex-col gap-1">
+        <h3 className="text-sm font-medium text-[var(--color-fg)]">Analyse du discours</h3>
+        <p className="text-[11px] text-[var(--color-fg-subtle)]">Détection IA de signaux de manipulation</p>
+      </div>
 
-      {!result.available ? (
-        <p className="text-xs text-gray-500 italic">{result.warning}</p>
-      ) : (
-        <Body result={result} />
-      )}
-    </div>
-  );
-}
-
-function Header() {
-  return (
-    <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
-      <span className="w-6 h-6 rounded-full bg-gray-800 text-gray-400 text-xs font-bold flex items-center justify-center">3</span>
-      Analyse du discours (IA)
-    </h3>
+      <div className="col-start-2">
+        {!result.available ? (
+          <p className="text-xs text-[var(--color-fg-subtle)] italic">{result.warning}</p>
+        ) : (
+          <Body result={result} />
+        )}
+      </div>
+    </section>
   );
 }
 
 function Body({ result }: { result: DiscourseResult }) {
-  const verdict = VERDICT_LABEL[result.verdict];
-  const barColor =
-    result.manipulation_score < 30
-      ? "bg-green-500"
-      : result.manipulation_score < 60
-        ? "bg-yellow-500"
-        : "bg-red-500";
+  const v = VERDICT[result.verdict];
 
   return (
-    <>
-      <div className="flex items-center gap-4 mb-4">
-        <div>
-          <p className="text-xs text-gray-500 mb-1">Score de manipulation</p>
-          <div className="flex items-center gap-2">
-            <div className="w-32 h-2 bg-gray-700 rounded-full overflow-hidden">
-              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${result.manipulation_score}%` }} />
-            </div>
-            <span className="text-sm font-bold text-white">{result.manipulation_score}/100</span>
-          </div>
-        </div>
-        <span className={`text-xs px-3 py-1 rounded-full border font-medium ${verdict.tone}`}>{verdict.text}</span>
+    <div className="flex flex-col gap-4 mt-2">
+      <div className="flex items-baseline gap-2">
+        <span className="num text-4xl font-medium leading-none tracking-tighter" style={{ color: v.color }}>
+          {result.manipulation_score}
+        </span>
+        <span className="num text-xs text-[var(--color-fg-faint)]">/100 manipulation</span>
+        <span
+          className="ml-3 text-[11px] uppercase tracking-wider font-medium"
+          style={{ color: v.color }}
+        >
+          {v.text}
+        </span>
       </div>
 
       {result.summary && (
-        <p className="text-xs text-gray-400 mb-4 p-3 bg-gray-800 rounded-lg">{result.summary}</p>
+        <p className="text-xs text-[var(--color-fg-muted)] leading-relaxed max-w-[60ch]">
+          {result.summary}
+        </p>
       )}
 
-      {result.signals.map((s, i) => (
-        <div key={i} className="mb-3 p-3 rounded-lg bg-red-900/20 border border-red-900/40 text-xs">
-          <p className="font-semibold text-red-300 mb-1">{s.type}</p>
-          {s.quote && <p className="italic text-gray-400 mb-1">« {s.quote} »</p>}
-          <p className="text-gray-500">{s.explanation}</p>
+      {result.signals.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {result.signals.map((s, i) => (
+            <div key={i} className="border-l-2 border-[var(--color-bad)] pl-3 py-0.5">
+              <p className="text-[11px] uppercase tracking-wider font-medium text-[var(--color-bad)]">
+                {s.type.replace(/_/g, " ")}
+              </p>
+              {s.quote && (
+                <p className="italic text-xs text-[var(--color-fg-muted)] mt-1 leading-relaxed">
+                  « {s.quote} »
+                </p>
+              )}
+              <p className="text-xs text-[var(--color-fg-subtle)] mt-1 leading-relaxed">{s.explanation}</p>
+            </div>
+          ))}
         </div>
-      ))}
-
-      {result.signals.length === 0 && (
-        <p className="text-xs text-green-400">Aucun signal de manipulation détecté.</p>
+      ) : (
+        <p className="text-xs text-[var(--color-accent)]">Aucun signal de manipulation détecté.</p>
       )}
-    </>
+    </div>
   );
 }

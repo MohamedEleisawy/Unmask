@@ -15,19 +15,23 @@ export function CompliancePillar({ data }: { data: PillarData }) {
   const matches = (data.matches as Match[]) || [];
 
   return (
-    <div>
+    <div className="flex flex-col gap-3">
       <StatusBadge
         ok={!blacklisted}
-        okLabel="Absent de la liste noire"
-        failLabel={`Liste noire AMF (${matches.length} correspondance${matches.length > 1 ? "s" : ""})`}
+        okLabel="Hors liste noire"
+        failLabel={`Liste noire — ${matches.length} match${matches.length > 1 ? "s" : ""}`}
       />
-      {matches.map((m, i) => (
-        <MatchRow key={i} match={m} />
-      ))}
+      {matches.length > 0 && (
+        <div className="flex flex-col gap-2 mt-1">
+          {matches.map((m, i) => (
+            <MatchRow key={i} match={m} />
+          ))}
+        </div>
+      )}
       {data.warning && <Warning text={data.warning as string} />}
       <SourceLink
         href="https://www.abe-infoservice.fr/liste-noire"
-        label="Consulter la liste noire ABE Infoservice"
+        label="abe-infoservice.fr/liste-noire"
       />
     </div>
   );
@@ -35,9 +39,13 @@ export function CompliancePillar({ data }: { data: PillarData }) {
 
 function MatchRow({ match }: { match: Match }) {
   return (
-    <div className="mt-2 p-2 rounded-lg bg-red-900/30 border border-red-800 text-xs text-red-300">
-      <p className="font-semibold">{match.matched_value}</p>
-      <p className="text-gray-400">{match.categories?.join(", ")}</p>
+    <div className="border-l-2 border-[var(--color-bad)] pl-3 py-0.5">
+      <p className="text-xs font-medium text-[var(--color-bad)]">{match.matched_value}</p>
+      {match.categories.length > 0 && (
+        <p className="text-[11px] text-[var(--color-fg-subtle)] mt-0.5">
+          {match.categories.join(" · ")}
+        </p>
+      )}
       {match.source_url && <SourceLink href={match.source_url} label={match.source || ""} />}
     </div>
   );

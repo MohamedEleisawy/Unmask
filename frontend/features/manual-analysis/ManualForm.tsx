@@ -12,30 +12,32 @@ type Props = {
 
 export function ManualForm({ text, onTextChange, onSubmit, loading, error }: Props) {
   return (
-    <form onSubmit={onSubmit} className="bg-gray-900 border border-gray-800 rounded-2xl p-6 flex flex-col gap-4">
-      <div>
-        <label className="text-xs text-gray-500 uppercase tracking-wider mb-2 block">
-          Texte à analyser (email, post Instagram, description YouTube, discours…)
-        </label>
+    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+      <label className="flex flex-col gap-2">
+        <span className="text-[10px] uppercase tracking-wider text-[var(--color-fg-faint)]">
+          Texte à analyser — email, post, description, discours
+        </span>
         <textarea
           rows={8}
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
-          placeholder="Collez ici un texte suspect…"
-          className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+          placeholder="Collez ici un contenu suspect"
+          className="w-full bg-transparent border-b border-[var(--color-line-strong)] focus:border-[var(--color-accent)] py-3 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none resize-none transition-colors leading-relaxed"
           autoFocus
         />
-        <p className="text-xs text-gray-600 mt-1">{text.length} caractères</p>
-      </div>
+        <span className="num text-[10px] text-[var(--color-fg-faint)] self-end">
+          {text.length} caractères
+        </span>
+      </label>
 
-      {error && <p className="text-red-400 text-sm">{error}</p>}
+      {error && <p className="text-xs text-[var(--color-bad)]">{error}</p>}
 
       <button
         type="submit"
         disabled={loading}
-        className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 transition-colors rounded-xl py-3 font-semibold text-sm cursor-pointer"
+        className="self-start inline-flex items-center gap-2 bg-[var(--color-accent)] text-[var(--color-bg)] hover:bg-[var(--color-accent)]/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:translate-y-px px-5 py-2.5 rounded-md text-sm font-semibold cursor-pointer"
       >
-        {loading ? <Spinner label="Analyse en cours…" /> : "Analyser le texte"}
+        {loading ? <Spinner label="Analyse en cours" /> : "Analyser le texte"}
       </button>
     </form>
   );

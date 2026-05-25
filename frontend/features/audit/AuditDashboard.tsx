@@ -24,7 +24,7 @@ const PILLARS: PillarDef[] = [
   {
     number: "1", key: "legal_identity",
     title: "Identité légale",
-    subtitle: "data.gouv.fr — Annuaire des Entreprises",
+    subtitle: "Annuaire des Entreprises — data.gouv.fr",
     render: (d) => <LegalPillar data={d} />,
   },
   {
@@ -36,7 +36,7 @@ const PILLARS: PillarDef[] = [
   {
     number: "3", key: "discourse",
     title: "Analyse du discours",
-    subtitle: "Détection de manipulation rhétorique (IA)",
+    subtitle: "Détection de manipulation rhétorique",
     render: (d) => <DiscoursePillar data={d} />,
   },
   {
@@ -48,13 +48,13 @@ const PILLARS: PillarDef[] = [
   {
     number: "5", key: "osint",
     title: "Réputation externe",
-    subtitle: "OSINT — Presse & signalements",
+    subtitle: "Presse, signalements, OSINT",
     render: (d) => <OsintPillar data={d} />,
   },
   {
     number: "6", key: "compliance",
     title: "Conformité AMF/ACPR",
-    subtitle: "ABE Infoservice — Liste noire officielle",
+    subtitle: "Liste noire ABE Infoservice",
     render: (d) => <CompliancePillar data={d} />,
   },
 ];
@@ -63,10 +63,10 @@ export function AuditDashboard({ results }: Props) {
   const { global_score, verdict, pillars, entity, disclaimer } = results;
 
   return (
-    <div className="w-full max-w-2xl mt-8 flex flex-col gap-6">
+    <section className="w-full mt-16 flex flex-col gap-2">
       <ScoreHeader score={global_score} verdict={verdict} entity={entity} />
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="divide-y divide-[var(--color-line)]">
         {PILLARS.map((p) => (
           <PillarCard
             key={p.key}
@@ -79,7 +79,9 @@ export function AuditDashboard({ results }: Props) {
         ))}
       </div>
 
-      <p className="text-xs text-gray-600 text-center px-4">{disclaimer}</p>
-    </div>
+      <p className="text-[11px] text-[var(--color-fg-faint)] leading-relaxed border-t border-[var(--color-line)] pt-6 mt-2 max-w-[60ch]">
+        {disclaimer}
+      </p>
+    </section>
   );
 }

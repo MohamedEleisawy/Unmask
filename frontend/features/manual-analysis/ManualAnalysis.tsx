@@ -37,7 +37,7 @@ export function ManualAnalysis() {
   }
 
   return (
-    <div className="w-full max-w-2xl flex flex-col gap-6">
+    <div className="w-full flex flex-col">
       <ManualForm
         text={text}
         onTextChange={setText}
@@ -45,8 +45,12 @@ export function ManualAnalysis() {
         loading={loading}
         error={error}
       />
-      {discourse && <DiscourseCard result={discourse} />}
-      {partnership && <PartnershipCard result={partnership} />}
+      {(partnership || discourse) && (
+        <div className="mt-12">
+          {partnership && <PartnershipCard result={partnership} />}
+          {discourse && <DiscourseCard result={discourse} />}
+        </div>
+      )}
     </div>
   );
 }

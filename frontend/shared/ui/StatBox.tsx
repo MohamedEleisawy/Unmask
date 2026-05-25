@@ -2,9 +2,9 @@ type Props = { label: string; value: string };
 
 export function StatBox({ label, value }: Props) {
   return (
-    <div className="bg-gray-800 rounded-lg p-2 text-center">
-      <p className="text-gray-500 text-xs">{label}</p>
-      <p className="text-white text-sm font-semibold">{value}</p>
+    <div className="flex flex-col gap-0.5">
+      <p className="text-[10px] text-[var(--color-fg-faint)] uppercase tracking-wider">{label}</p>
+      <p className="num text-sm text-[var(--color-fg)]">{value}</p>
     </div>
   );
 }

@@ -6,40 +6,50 @@ type Props = {
   entity: AuditEntity;
 };
 
-const VERDICT_STYLE: Record<Verdict, { bg: string; border: string; text: string; label: string }> = {
-  fiable: { bg: "bg-green-900/50", border: "border-green-700", text: "text-green-300", label: "Fiable" },
-  suspect: { bg: "bg-yellow-900/50", border: "border-yellow-700", text: "text-yellow-300", label: "Suspect" },
-  alerte: { bg: "bg-red-900/50", border: "border-red-700", text: "text-red-300", label: "Alerte" },
+const VERDICT: Record<Verdict, { label: string; color: string }> = {
+  fiable: { label: "Fiable", color: "var(--color-accent)" },
+  suspect: { label: "Suspect", color: "var(--color-warn)" },
+  alerte: { label: "Alerte", color: "var(--color-bad)" },
 };
 
 export function ScoreHeader({ score, verdict, entity }: Props) {
-  const style = VERDICT_STYLE[verdict];
-  const barColor = score >= 70 ? "bg-green-500" : score >= 40 ? "bg-yellow-500" : "bg-red-500";
+  const v = VERDICT[verdict];
 
   return (
-    <div className={`rounded-2xl border p-6 ${style.bg} ${style.border}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-1">Score global de crédibilité</p>
-          <p className="text-xs text-gray-500">
-            {entity.name && <span className="text-gray-300">{entity.name}</span>}
-            {entity.siren && <span className="ml-2 text-gray-500">SIREN {entity.siren}</span>}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className={`text-4xl font-black ${style.text}`}>
-            {score}
-            <span className="text-2xl">/100</span>
-          </p>
-          <p className={`text-sm font-semibold ${style.text}`}>{style.label}</p>
+    <section className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 md:gap-12 items-end pb-8 border-b border-[var(--color-line-strong)]">
+      <div className="flex flex-col gap-3">
+        <span className="text-[10px] uppercase tracking-[0.2em] text-[var(--color-fg-faint)]">
+          Score global de crédibilité
+        </span>
+        <h2 className="text-base text-[var(--color-fg-muted)] leading-snug max-w-[40ch]">
+          {entity.name || entity.url || "Entité auditée"}
+          {entity.siren && (
+            <span className="ml-2 num text-xs text-[var(--color-fg-faint)]">
+              SIREN {entity.siren}
+            </span>
+          )}
+        </h2>
+        <div className="flex items-center gap-2 mt-1">
+          <span
+            className="inline-block w-2 h-2 rounded-full"
+            style={{ background: v.color, boxShadow: `0 0 0 4px ${v.color}1f` }}
+            aria-hidden
+          />
+          <span className="text-xs uppercase tracking-wider font-medium" style={{ color: v.color }}>
+            {v.label}
+          </span>
         </div>
       </div>
-      <div className="w-full bg-gray-800 rounded-full h-2">
-        <div
-          className={`h-2 rounded-full transition-all ${barColor}`}
-          style={{ width: `${score}%` }}
-        />
+
+      <div className="flex items-baseline gap-1.5 -mb-1">
+        <span
+          className="num text-7xl md:text-8xl font-medium leading-none tracking-tighter"
+          style={{ color: v.color }}
+        >
+          {score}
+        </span>
+        <span className="num text-xl text-[var(--color-fg-faint)]">/100</span>
       </div>
-    </div>
+    </section>
   );
 }

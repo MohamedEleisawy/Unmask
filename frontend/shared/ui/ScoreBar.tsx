@@ -1,14 +1,22 @@
 type Props = { score: number };
 
 export function ScoreBar({ score }: Props) {
-  const color = score >= 70 ? "bg-green-500" : score >= 40 ? "bg-yellow-500" : "bg-red-500";
-  const width = Math.max(0, Math.min(100, score));
+  const clamped = Math.max(0, Math.min(100, score));
+  const tone =
+    score >= 70
+      ? "var(--color-accent)"
+      : score >= 40
+        ? "var(--color-warn)"
+        : "var(--color-bad)";
   return (
-    <div className="flex items-center gap-1.5">
-      <div className="w-20 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${width}%` }} />
+    <div className="flex items-center gap-2">
+      <div className="w-24 h-[3px] bg-[var(--color-line-strong)] rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-[width] duration-500 ease-out"
+          style={{ width: `${clamped}%`, background: tone }}
+        />
       </div>
-      <span className="text-xs text-gray-400">{score}/100</span>
+      <span className="num text-[11px] text-[var(--color-fg-muted)]">{score}<span className="text-[var(--color-fg-faint)]">/100</span></span>
     </div>
   );
 }

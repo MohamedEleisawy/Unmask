@@ -9,23 +9,23 @@ export function LegalPillar({ data }: { data: PillarData }) {
   const identity = data.identity as Record<string, unknown> | null;
 
   return (
-    <div>
-      <StatusBadge ok={found} okLabel="Entité trouvée" failLabel="Introuvable" />
+    <div className="flex flex-col gap-3">
+      <StatusBadge ok={found} okLabel="Entité enregistrée" failLabel="Introuvable" />
       {identity && (
-        <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <InfoRow label="Nom" value={identity.nom as string} />
+        <div className="grid grid-cols-2 gap-x-6 gap-y-3 mt-1">
+          <InfoRow label="Raison sociale" value={identity.nom as string} />
           <InfoRow label="SIREN" value={identity.siren as string} />
           <InfoRow
             label="Statut"
             value={(identity.est_actif as boolean) ? "Active" : "Radiée"}
             alert={!identity.est_actif as boolean}
           />
-          <InfoRow label="Forme" value={identity.forme_juridique as string} />
+          <InfoRow label="Forme juridique" value={identity.forme_juridique as string} />
           <InfoRow label="Création" value={identity.date_creation as string} />
         </div>
       )}
       {identity?.source_url && (
-        <SourceLink href={identity.source_url as string} label="Vérifier sur data.gouv.fr" />
+        <SourceLink href={identity.source_url as string} label="annuaire-entreprises.data.gouv.fr" />
       )}
       {data.warning && <Warning text={data.warning as string} />}
     </div>

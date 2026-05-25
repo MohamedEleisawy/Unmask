@@ -22,28 +22,31 @@ export function PartnershipPillar({ data }: { data: PillarData }) {
   }
 
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-3">
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-4 flex-wrap">
         <ScoreBar score={score} />
-        <StatusBadge ok={hasDisclosure} okLabel="Mention partenariat ✓" failLabel="Pas de mention" />
+        <StatusBadge ok={hasDisclosure} okLabel="Mention présente" failLabel="Mention manquante" />
       </div>
-      {flags.map((f, i) => (
-        <FlagRow key={i} flag={f} />
-      ))}
-      {flags.length === 0 && <p className="text-xs text-green-400">Aucune violation détectée.</p>}
+      {flags.length > 0 ? (
+        <div className="flex flex-col gap-2 mt-1">
+          {flags.map((f, i) => (
+            <FlagRow key={i} flag={f} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-[var(--color-accent)] mt-1">Aucune violation détectée.</p>
+      )}
     </div>
   );
 }
 
 function FlagRow({ flag }: { flag: Flag }) {
-  const tone =
-    flag.severity === "violation"
-      ? "bg-red-900/30 border border-red-800 text-red-300"
-      : "bg-yellow-900/30 border border-yellow-800 text-yellow-300";
+  const color =
+    flag.severity === "violation" ? "var(--color-bad)" : "var(--color-warn)";
   return (
-    <div className={`mb-2 p-2 rounded-lg text-xs ${tone}`}>
-      <p className="font-semibold">{flag.rule}</p>
-      <p className="text-gray-400 mt-0.5">{flag.detail}</p>
+    <div className="border-l-2 pl-3 py-0.5" style={{ borderColor: color }}>
+      <p className="text-xs font-medium" style={{ color }}>{flag.rule}</p>
+      <p className="text-xs text-[var(--color-fg-muted)] mt-0.5 leading-relaxed">{flag.detail}</p>
       {flag.source_url && <SourceLink href={flag.source_url} label={flag.source || ""} />}
     </div>
   );
