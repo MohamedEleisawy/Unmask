@@ -6,9 +6,10 @@ type Props = {
   subtitle: string;
   data: PillarData | undefined;
   render: (d: PillarData) => React.ReactNode;
+  fallbackMessage?: string;
 };
 
-export function PillarCard({ number, title, subtitle, data, render }: Props) {
+export function PillarCard({ number, title, subtitle, data, render, fallbackMessage }: Props) {
   const unavailable = !data || data.available === false;
 
   return (
@@ -30,7 +31,7 @@ export function PillarCard({ number, title, subtitle, data, render }: Props) {
       <div className="col-span-2 md:col-span-1 min-w-0">
         {unavailable ? (
           <p className="text-xs text-[var(--color-fg-subtle)] italic">
-            {(data?.warning as string) || "Clé API non configurée."}
+            {(data?.warning as string) || fallbackMessage || "Donnée non disponible pour les inputs fournis."}
           </p>
         ) : (
           render(data!)

@@ -23,5 +23,4 @@ export type AuditRequest = {
   siren?: string;
   youtube_url?: string;
   sector: string;
-  text_to_analyze?: string;
 };

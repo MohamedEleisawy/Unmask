@@ -14,6 +14,7 @@ from app.api.partnerships import router as partnerships_router
 from app.api.discourse import router as discourse_router
 from app.api.youtube import router as youtube_router
 from app.api.osint import router as osint_router
+from app.api.social_presence import router as social_presence_router
 from app.api.full_audit import router as full_audit_router
 
 app = FastAPI(
@@ -48,7 +49,10 @@ app.include_router(osint_router)
 # Pilier 6 — Conformité institutionnelle (AMF/ACPR)
 app.include_router(compliance_router)
 
-# Orchestrateur — Audit complet (6 piliers)
+# Présence sociale (Google site:) — informationnel, hors score
+app.include_router(social_presence_router)
+
+# Orchestrateur — Audit complet (3 critères pondérés)
 app.include_router(full_audit_router)
 
 

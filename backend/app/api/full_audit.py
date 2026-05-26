@@ -1,8 +1,8 @@
 """
-Route POST /audit/full - Orchestrateur des 6 piliers.
+Route POST /audit/full - Orchestrateur de l'audit complet.
 
-Lance tous les piliers disponibles en parallele et retourne
-un rapport unifie avec un score global de credibilite.
+Lance en parallele les services dont les inputs requis sont presents,
+puis calcule un score pondere sur 3 criteres (cf. audit_scoring).
 """
 
 import asyncio
@@ -13,10 +13,9 @@ from pydantic import BaseModel, Field
 
 from app.services.amf_checker import check_compliance
 from app.services.audit_scoring import compute_global_score, verdict_from_score
-from app.services.discourse_analyzer import analyze_discourse
 from app.services.osint_checker import check_osint_reputation
-from app.services.partnership_checker import check_partnership_transparency
 from app.services.siren_checker import check_legal_identity
+from app.services.social_presence_checker import find_social_presence
 from app.services.youtube_checker import check_youtube_engagement
 
 router = APIRouter(prefix="/audit", tags=["Audit Complet"])
@@ -34,7 +33,6 @@ class FullAuditRequest(BaseModel):
     url: Optional[str] = Field(default=None, description="URL du site ou profil reseau social.")
     youtube_url: Optional[str] = Field(default=None, description="URL de la chaine YouTube.")
     sector: Optional[str] = Field(default="autre", description="Secteur d'activite.")
-    text_to_analyze: Optional[str] = Field(default=None, description="Texte a analyser (discours, description).")
 
 
 def _build_async_tasks(body: FullAuditRequest) -> dict[str, Awaitable]:
@@ -46,14 +44,12 @@ def _build_async_tasks(body: FullAuditRequest) -> dict[str, Awaitable]:
             entity_name=body.entity_name, siren=body.siren,
         )
 
-    if body.text_to_analyze:
-        tasks["discourse"] = analyze_discourse(body.text_to_analyze)
-
     if body.youtube_url or (body.url and "youtube" in (body.url or "").lower()):
         tasks["youtube"] = check_youtube_engagement(body.youtube_url or body.url)
 
     if body.entity_name:
         tasks["osint"] = check_osint_reputation(body.entity_name)
+        tasks["social_presence"] = find_social_presence(body.entity_name)
 
     if body.entity_name or body.url:
         async def _compliance():
@@ -75,26 +71,17 @@ def _serialize(res) -> dict:
 
 
 async def _run_pillars(body: FullAuditRequest) -> dict:
-    """Execute les piliers et retourne un dict pilier -> resultat serialise."""
     tasks = _build_async_tasks(body)
-
     keys = list(tasks.keys())
     raw_results = await asyncio.gather(*tasks.values(), return_exceptions=True)
-    pillars = {k: _serialize(v) for k, v in zip(keys, raw_results)}
-
-    # Pilier 2 (synchrone) traite a part
-    if body.text_to_analyze:
-        pillars["partnerships"] = check_partnership_transparency(body.text_to_analyze).to_dict()
-
-    return pillars
+    return {k: _serialize(v) for k, v in zip(keys, raw_results)}
 
 
-@router.post("/full", summary="Audit complet - 6 piliers de credibilite")
+@router.post("/full", summary="Audit complet - 3 criteres ponderes + presence sociale")
 async def full_audit(body: FullAuditRequest):
     """
-    Lance tous les piliers disponibles en parallele.
-    Les piliers necessitant une cle API non configuree retournent available=False
-    sans bloquer les autres.
+    Lance les services disponibles en parallele.
+    Un service sans input requis ou sans cle API renvoie available=False sans bloquer les autres.
     """
     pillars = await _run_pillars(body)
     score = compute_global_score(pillars)

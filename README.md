@@ -1,17 +1,29 @@
 # Unmask
 
-PWA d'audit de crédibilité factuel pour influenceurs et marques. Six piliers vérifiés via des sources publiques officielles (data.gouv.fr, AMF, YouTube Data API, Anthropic). Zéro stockage de données personnelles — conforme RGPD.
+PWA d'audit de crédibilité factuel pour influenceurs et marques. Trois critères pondérés vérifiés via des sources publiques officielles (data.gouv.fr, AMF/ACPR, YouTube Data API, Anthropic). Zéro stockage de données personnelles — conforme RGPD.
 
 ## Stack
 
 - **Backend** : Python 3.11+, FastAPI, httpx async
 - **Frontend** : Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript
 
+## Les 3 critères
+
+| # | Critère | Poids | Source |
+|---|---|---|---|
+| 1 | Identité légale vérifiable (SIREN actif, statut juridique) | 40 pts | Annuaire des Entreprises — `recherche-entreprises.api.gouv.fr` |
+| 2 | Conformité AMF/ACPR (absence de la liste noire) | 35 pts | data.gouv.fr — dataset `d2d9df6d-1cd2-41a8-96f5-684cb3057ecb` |
+| 3 | Analyse de discours & signaux publics | 25 pts | Anthropic Claude + YouTube Data API + Serper/Google CSE (OSINT) |
+
+Le critère 3 est une moyenne interne de 3 sous-signaux (discours LLM, cohérence YouTube, réputation OSINT). Les poids des critères absents sont redistribués proportionnellement sur les critères présents — un input partiel donne un score partiel signalé dans l'UI.
+
+Les anciens piliers `partnerships` (loi 2023) restent accessibles via `/audit/manual` et la feature `manual-analysis` du front, mais ne pèsent plus dans le score global.
+
 ## Prérequis
 
 - Python 3.11+
 - Node.js 20+ (npm)
-- Les clés API listées dans `backend/.env.example` (toutes optionnelles — chaque pilier se désactive proprement si sa clé manque)
+- Clés API listées dans `backend/.env.example` (toutes optionnelles — chaque sous-signal se désactive proprement si sa clé manque)
 
 ## Installation
 
@@ -33,9 +45,9 @@ cd frontend
 npm install
 ```
 
-### Données AMF (pilier 6)
+### Données AMF
 
-Télécharger `abeis-liste-noire.csv` depuis [abe-infoservice.fr/liste-noire](https://www.abe-infoservice.fr/liste-noire) et le placer dans `backend/data/`.
+Aucune action manuelle requise : le service `amf_checker` télécharge le CSV officiel depuis data.gouv.fr (URL stable, cache mémoire 6h) au premier appel. Un fichier `backend/data/abeis-liste-noire.csv` peut être présent comme fallback hors-ligne.
 
 ## Lancement (dev)
 
@@ -57,20 +69,21 @@ Docs API auto-générées : http://localhost:8000/docs
 
 Toutes dans `backend/.env` (voir `.env.example`) :
 
-| Variable | Pilier | Obtenir |
+| Variable | Sous-signal du critère 3 | Obtenir |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | 3 — Analyse de discours | [console.anthropic.com](https://console.anthropic.com) |
-| `YOUTUBE_API_KEY` | 4 — Engagement YouTube | [console.cloud.google.com](https://console.cloud.google.com) (activer YouTube Data API v3) |
-| `SERPER_API_KEY` *ou* `GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_ID` | 5 — OSINT | [serper.dev](https://serper.dev) (recommandé, 2500 req/mois gratuits) |
+| `ANTHROPIC_API_KEY` | Analyse de discours | [console.anthropic.com](https://console.anthropic.com) |
+| `YOUTUBE_API_KEY` | Cohérence YouTube | [console.cloud.google.com](https://console.cloud.google.com) (activer YouTube Data API v3) |
+| `SERPER_API_KEY` *ou* `GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_ID` | Réputation OSINT | [serper.dev](https://serper.dev) (recommandé, 2500 req/mois gratuits) |
 
-Les piliers 1, 2 et 6 fonctionnent sans clé (data.gouv.fr public, analyse regex locale, CSV AMF local).
+Les critères 1 et 2 fonctionnent sans clé (API data.gouv.fr publique).
 
 ## Structure
 
 ```
 backend/app/
-  api/         # Routers FastAPI (1 fichier par pilier)
-  services/    # Logique métier : <pilier>_models.py + <pilier>_checker.py
+  api/         # Routers FastAPI (1 fichier par sous-service)
+  services/    # Logique métier : <service>_models.py + <service>_checker.py
+               # audit_scoring.py pondère les 3 critères
 
 frontend/
   app/         # Next.js App Router (page, layout, globals.css)
@@ -84,14 +97,14 @@ Détails dans [`docs/claude/architecture.md`](docs/claude/architecture.md).
 
 ```bash
 # Backend
-uvicorn app.main:app --reload          # dev avec hot-reload
-python -m compileall app                # check syntaxe
+python -m uvicorn app.main:app --reload   # dev avec hot-reload
+python -m compileall app                  # check syntaxe
 
 # Frontend
-npm run dev                             # dev (http://localhost:3000)
-npm run build                           # build production
-npm run lint                            # ESLint
-npx tsc --noEmit                        # check TypeScript
+npm run dev                               # dev (http://localhost:3000)
+npm run build                             # build production
+npm run lint                              # ESLint
+npx tsc --noEmit                          # check TypeScript
 ```
 
 ## Conventions
@@ -102,4 +115,4 @@ Détails dans [`docs/claude/conventions.md`](docs/claude/conventions.md) et [`CL
 
 ## Engagement
 
-Aucun verdict définitif n'est émis. Toutes les sources sont publiques et tracables. Aucune donnée personnelle stockée — traitement en mémoire vive uniquement.
+Aucun verdict définitif n'est émis. Toutes les sources sont publiques et traçables. Aucune donnée personnelle stockée — traitement en mémoire vive uniquement.

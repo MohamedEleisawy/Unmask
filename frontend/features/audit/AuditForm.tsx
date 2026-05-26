@@ -16,7 +16,6 @@ export function AuditForm({ onResults, onReset }: Props) {
   const [siren, setSiren] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [sector, setSector] = useState("finance");
-  const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -24,7 +23,7 @@ export function AuditForm({ onResults, onReset }: Props) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!query.trim() && !siren.trim()) {
-      setError("Renseignez un nom, une URL ou un SIREN.");
+      setError("Renseigne au moins un nom, un @handle, un site web ou un SIREN.");
       return;
     }
     setLoading(true);
@@ -39,7 +38,6 @@ export function AuditForm({ onResults, onReset }: Props) {
         siren: siren || undefined,
         youtube_url: youtubeUrl || undefined,
         sector,
-        text_to_analyze: text || undefined,
       });
       onResults(data);
     } catch (e) {
@@ -55,7 +53,7 @@ export function AuditForm({ onResults, onReset }: Props) {
         <SearchIcon className="w-4 h-4 text-[var(--color-fg-subtle)] flex-shrink-0" />
         <input
           type="text"
-          placeholder="Nom, URL, @handle, site web…"
+          placeholder="Nom prénom, @handle Insta/TikTok, site web, ou nom d'entreprise…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full bg-transparent pl-3 py-4 text-base text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none"
@@ -64,16 +62,16 @@ export function AuditForm({ onResults, onReset }: Props) {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-x-8 gap-y-4 items-end">
-        <UnderlineField label="SIREN — Identifiant entreprise">
+        <UnderlineField label="SIREN — 9 chiffres (fiabilise le critère identité légale)">
           <input
             type="text"
-            placeholder="503 932 568"
+            placeholder="ex. 503932568"
             value={siren}
             onChange={(e) => setSiren(e.target.value.replace(/\D/g, "").slice(0, 9))}
             className="num w-full bg-transparent border-b border-[var(--color-line)] focus:border-[var(--color-fg-subtle)] py-2 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none transition-colors"
           />
         </UnderlineField>
-        <UnderlineField label="Secteur déclaré">
+        <UnderlineField label="Secteur déclaré (ajuste la vérification AMF/ACPR)">
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}
@@ -99,24 +97,19 @@ export function AuditForm({ onResults, onReset }: Props) {
 
       {showAdvanced && (
         <div className="flex flex-col gap-4 border-l border-[var(--color-line)] pl-5 ml-1">
-          <UnderlineField label="URL chaîne YouTube">
+          <UnderlineField label="URL chaîne YouTube (active le sous-signal d'engagement)">
             <input
               type="text"
-              placeholder="https://youtube.com/@handle"
+              placeholder="https://youtube.com/@nom-de-la-chaine"
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               className="w-full bg-transparent border-b border-[var(--color-line)] focus:border-[var(--color-fg-subtle)] py-2 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none transition-colors"
             />
           </UnderlineField>
-          <UnderlineField label="Texte à analyser — caption, email, description">
-            <textarea
-              rows={4}
-              placeholder="Collez ici un contenu pour détecter manipulation et conformité loi 2023"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="w-full bg-transparent border-b border-[var(--color-line)] focus:border-[var(--color-fg-subtle)] py-2 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none transition-colors resize-none"
-            />
-          </UnderlineField>
+          <p className="text-[11px] text-[var(--color-fg-faint)] leading-relaxed">
+            Besoin d'analyser un texte brut (caption, email, description) ? Utilise l'onglet{" "}
+            <span className="text-[var(--color-fg-subtle)]">Analyse de texte</span> en haut à droite.
+          </p>
         </div>
       )}
 

@@ -8,12 +8,8 @@ Croise l'entite avec des sources publiques via :
 Requiert : SERPER_API_KEY ou (GOOGLE_CSE_API_KEY + GOOGLE_CSE_ID) dans .env
 """
 
-import httpx
-
-from app.config import GOOGLE_CSE_API_KEY, GOOGLE_CSE_ID, SERPER_API_KEY
+from app.services._search_backend import has_search_backend, search
 from app.services.osint_models import OsintResult, OsintResult_item
-
-_TIMEOUT = 10
 
 _ALERT_KEYWORDS = [
     "arnaque", "escroquerie", "plainte", "condamné", "frauduleux",
@@ -59,38 +55,6 @@ def _to_items(raw: list[dict]) -> list[OsintResult_item]:
 
 
 # ---------------------------------------------------------------------------
-# Backends de recherche
-# ---------------------------------------------------------------------------
-
-async def _search_serper(query: str, client: httpx.AsyncClient) -> list[dict]:
-    resp = await client.post(
-        "https://google.serper.dev/search",
-        headers={"X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json"},
-        json={"q": query, "num": 10, "gl": "fr", "hl": "fr"},
-        timeout=_TIMEOUT,
-    )
-    resp.raise_for_status()
-    return resp.json().get("organic", [])
-
-
-async def _search_google_cse(query: str, client: httpx.AsyncClient) -> list[dict]:
-    resp = await client.get(
-        "https://www.googleapis.com/customsearch/v1",
-        params={
-            "key": GOOGLE_CSE_API_KEY,
-            "cx": GOOGLE_CSE_ID,
-            "q": query,
-            "num": 10,
-            "lr": "lang_fr",
-        },
-        timeout=_TIMEOUT,
-    )
-    resp.raise_for_status()
-    raw = resp.json().get("items", [])
-    return [{"title": i.get("title", ""), "link": i.get("link", ""), "snippet": i.get("snippet", "")} for i in raw]
-
-
-# ---------------------------------------------------------------------------
 # Fonction principale
 # ---------------------------------------------------------------------------
 
@@ -99,7 +63,7 @@ async def check_osint_reputation(entity_name: str) -> OsintResult:
     if not entity_name or not entity_name.strip():
         return OsintResult(warning="Nom d'entite requis pour la recherche OSINT.", available=False)
 
-    if not SERPER_API_KEY and not (GOOGLE_CSE_API_KEY and GOOGLE_CSE_ID):
+    if not has_search_backend():
         return OsintResult(
             warning="Aucune cle API de recherche configuree (SERPER_API_KEY ou GOOGLE_CSE_API_KEY+ID). OSINT indisponible.",
             available=False,
@@ -108,9 +72,7 @@ async def check_osint_reputation(entity_name: str) -> OsintResult:
     query = _build_query(entity_name.strip())
 
     try:
-        async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-            raw = await (_search_serper(query, client) if SERPER_API_KEY else _search_google_cse(query, client))
-
+        raw = await search(query, num=10)
         items = _to_items(raw)
         return OsintResult(
             query=query,

@@ -21,7 +21,7 @@ export function ManualForm({ text, onTextChange, onSubmit, loading, error }: Pro
           rows={8}
           value={text}
           onChange={(e) => onTextChange(e.target.value)}
-          placeholder="Collez ici un contenu suspect"
+          placeholder="Colle ici un email, un post Instagram, une caption TikTok, une description YouTube, un argumentaire… L'analyse détecte les techniques de manipulation et l'absence de mentions de partenariat (loi 2023)."
           className="w-full bg-transparent border-b border-[var(--color-line-strong)] focus:border-[var(--color-accent)] py-3 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none resize-none transition-colors leading-relaxed"
           autoFocus
         />

@@ -6,7 +6,7 @@ Depuis `backend/` :
 
 - `pip install -r requirements.txt` — installer les dépendances Python
 - `cp .env.example .env` — créer le fichier d'environnement local, puis renseigner les clés
-- `uvicorn app.main:app --reload` — démarrer l'API en dev (http://localhost:8000)
+- `python -m uvicorn app.main:app --reload` — démarrer l'API en dev (http://localhost:8000)
 - `http://localhost:8000/docs` — documentation OpenAPI auto-générée
 - `http://localhost:8000/health` — endpoint de santé
 
@@ -22,8 +22,10 @@ Depuis `frontend/` :
 
 ## Variables d'environnement
 
-Voir `backend/.env.example`. Clés requises :
+Voir `backend/.env.example`. Toutes les clés alimentent les sous-signaux du **critère 3** (analyse de discours & signaux publics) :
 
-- `ANTHROPIC_API_KEY` — Pilier 3 (analyse de discours)
-- `YOUTUBE_API_KEY` — Pilier 4 (cohérence d'engagement)
-- `GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_ID` **ou** `SERPER_API_KEY` — Pilier 5 (OSINT)
+- `ANTHROPIC_API_KEY` — analyse de discours via Claude
+- `YOUTUBE_API_KEY` — cohérence d'engagement YouTube
+- `GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_ID` **ou** `SERPER_API_KEY` — réputation OSINT
+
+Les critères 1 (SIREN) et 2 (AMF/ACPR) n'exigent aucune clé : ils tapent directement les APIs publiques de data.gouv.fr.

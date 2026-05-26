@@ -1,22 +1,38 @@
 """
 Verification AMF/ACPR - Liste noire ABE Infoservice.
 
-LIMITE CONNUE : La liste AMF recense des domaines, emails et noms de societes.
-Elle ne contient PAS les noms/prenoms de personnes physiques.
+Source primaire : data.gouv.fr - dataset "Listes noires des entites non
+autorisees a proposer des produits ou services financiers en France".
+URL stable : /api/1/datasets/r/<resource_id>
 
-Source : https://www.abe-infoservice.fr/liste-noire
+Schema CSV (separateur `;`, encodage UTF-8 BOM) :
+    "nom";"categorie";"date_inscription"
+
+Le champ `nom` melange domaines, emails et raisons sociales.
+
+LIMITE CONNUE : La liste ne contient pas les noms/prenoms de personnes
+physiques. La recherche par nom n'est fiable que pour les societes declarees.
 """
 
 import csv
+import io
+import time
 import unicodedata
 from datetime import date
-from functools import lru_cache
 from pathlib import Path
 from typing import Optional
 
+import httpx
+
 from app.services.amf_models import AmfMatch, ComplianceResult
 
-_CSV_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "abeis-liste-noire.csv"
+_DATAGOUV_URL = (
+    "https://www.data.gouv.fr/api/1/datasets/r/d2d9df6d-1cd2-41a8-96f5-684cb3057ecb"
+)
+_FALLBACK_CSV = Path(__file__).resolve().parent.parent.parent / "data" / "abeis-liste-noire.csv"
+_CACHE_TTL_SECONDS = 6 * 3600  # rafraichi toutes les 6h
+
+_cache: dict = {"entries": None, "fetched_at": 0.0, "source": None}
 
 
 # ---------------------------------------------------------------------------
@@ -24,7 +40,6 @@ _CSV_PATH = Path(__file__).resolve().parent.parent.parent / "data" / "abeis-list
 # ---------------------------------------------------------------------------
 
 def _normalize(text: str) -> str:
-    """Minuscules + suppression accents + suppression du prefixe www."""
     text = text.lower().strip()
     text = unicodedata.normalize("NFD", text)
     text = "".join(c for c in text if unicodedata.category(c) != "Mn")
@@ -32,46 +47,98 @@ def _normalize(text: str) -> str:
 
 
 def _extract_hostname(url_or_email: str) -> str:
-    """Extrait le hostname depuis une URL ou un email."""
     text = _normalize(url_or_email)
+    if "://" in text:
+        text = text.split("://", 1)[1]
     if "@" in text:
         text = text.split("@")[-1]
-    return text.split("/")[0].split("?")[0]
+    text = text.split("/")[0].split("?")[0].split("#")[0]
+    return text.removeprefix("www.")
+
+
+def _looks_like_host_or_email(raw: str) -> bool:
+    return "@" in raw or "." in raw
 
 
 def _parse_date(raw: str) -> Optional[date]:
-    try:
-        day, month, year = raw.strip().split("/")
-        return date(int(year), int(month), int(day))
-    except (ValueError, AttributeError):
-        return None
+    raw = raw.strip()
+    for fmt_attempt in (
+        lambda s: date.fromisoformat(s),                                # YYYY-MM-DD
+        lambda s: date(*reversed([int(x) for x in s.split("/")])),      # DD/MM/YYYY
+    ):
+        try:
+            return fmt_attempt(raw)
+        except (ValueError, TypeError):
+            continue
+    return None
 
 
 # ---------------------------------------------------------------------------
-# Chargement du CSV (cache LRU)
+# Parsing CSV (multi-schemas : data.gouv et legacy ABE)
 # ---------------------------------------------------------------------------
 
-@lru_cache(maxsize=1)
+def _parse_csv(text: str) -> list[dict]:
+    # Detection du separateur via la 1re ligne
+    first_line = text.splitlines()[0] if text else ""
+    delimiter = ";" if first_line.count(";") >= first_line.count(",") else ","
+
+    reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
+    entries: list[dict] = []
+    for row in reader:
+        raw_name = (row.get("nom") or row.get("URL / Mails") or "").strip()
+        raw_denom = (row.get("Dénomination") or "").strip()
+        raw_cats = row.get("categorie") or row.get("Catégorie(s)") or ""
+        raw_date = row.get("date_inscription") or row.get("Date d'inscription") or ""
+
+        if _looks_like_host_or_email(raw_name):
+            hostname = _extract_hostname(raw_name)
+            denomination = _normalize(raw_denom)
+        else:
+            hostname = ""
+            denomination = _normalize(raw_denom or raw_name)
+
+        entries.append({
+            "hostname": hostname,
+            "denomination": denomination,
+            "raw_value": raw_name or raw_denom,
+            "categories": [c.strip() for c in raw_cats.split(",") if c.strip()],
+            "date_added": _parse_date(raw_date),
+        })
+    return entries
+
+
+# ---------------------------------------------------------------------------
+# Chargement avec cache TTL et fallback fichier local
+# ---------------------------------------------------------------------------
+
 def _load_blacklist() -> list[dict]:
-    """Charge le CSV une seule fois en memoire."""
-    if not _CSV_PATH.exists():
-        raise FileNotFoundError(
-            f"Fichier AMF introuvable : {_CSV_PATH}\n"
-            "Telechargez-le sur https://www.abe-infoservice.fr/liste-noire"
+    now = time.time()
+    if _cache["entries"] is not None and (now - _cache["fetched_at"]) < _CACHE_TTL_SECONDS:
+        return _cache["entries"]
+
+    entries: Optional[list[dict]] = None
+    source = None
+
+    try:
+        with httpx.Client(timeout=20.0, follow_redirects=True) as client:
+            r = client.get(_DATAGOUV_URL)
+            r.raise_for_status()
+            entries = _parse_csv(r.content.decode("utf-8-sig"))
+            source = "data.gouv.fr"
+    except (httpx.HTTPError, ValueError):
+        entries = None
+
+    if not entries and _FALLBACK_CSV.exists():
+        with open(_FALLBACK_CSV, encoding="utf-8-sig") as f:
+            entries = _parse_csv(f.read())
+            source = "local-fallback"
+
+    if entries is None:
+        raise RuntimeError(
+            "Liste AMF indisponible : echec data.gouv.fr et aucun fichier local de fallback."
         )
 
-    entries = []
-    with open(_CSV_PATH, encoding="utf-8-sig", newline="") as f:
-        for row in csv.DictReader(f):
-            raw_url = row.get("URL / Mails", "").strip()
-            raw_cats = row.get("Catégorie(s)", "") or ""
-            entries.append({
-                "hostname": _extract_hostname(raw_url),
-                "denomination": _normalize(row.get("Dénomination", "").strip()),
-                "raw_value": raw_url,
-                "categories": [c.strip() for c in raw_cats.split(",") if c.strip()],
-                "date_added": _parse_date(row.get("Date d'inscription", "")),
-            })
+    _cache.update(entries=entries, fetched_at=now, source=source)
     return entries
 
 
@@ -90,7 +157,7 @@ def _match_by_url(blacklist: list[dict], url: Optional[str]) -> tuple[list[AmfMa
             categories=e["categories"],
             date_added=e["date_added"],
         )
-        for e in blacklist if e["hostname"] == query
+        for e in blacklist if e["hostname"] and e["hostname"] == query
     ]
     return matches, query
 
@@ -101,7 +168,9 @@ def _match_by_name(
     if not name:
         return [], None
     query = _normalize(name)
-    existing_values = {m.matched_value for m in already}
+    if len(query) < 3:
+        return [], query
+    existing = {m.matched_value for m in already}
     matches = [
         AmfMatch(
             matched_on="denomination",
@@ -110,7 +179,7 @@ def _match_by_name(
             date_added=e["date_added"],
         )
         for e in blacklist
-        if e["denomination"] and query in e["denomination"] and e["raw_value"] not in existing_values
+        if e["denomination"] and query in e["denomination"] and e["raw_value"] not in existing
     ]
     return matches, query
 
@@ -137,7 +206,7 @@ def _build_warning(
 
 
 # ---------------------------------------------------------------------------
-# Fonction principale
+# API publique
 # ---------------------------------------------------------------------------
 
 def check_compliance(
@@ -146,15 +215,6 @@ def check_compliance(
     sector: Optional[str] = None,
     siren: Optional[str] = None,
 ) -> ComplianceResult:
-    """
-    Verifie une entite contre la liste noire AMF/ACPR.
-
-    Args:
-        url         : URL ou profil reseau social.
-        entity_name : Nom public de la personne ou de la marque.
-        sector      : Secteur declare (ex. "finance", "coaching"...).
-        siren       : SIREN optionnel (non present dans la liste AMF).
-    """
     blacklist = _load_blacklist()
 
     url_matches, url_query = _match_by_url(blacklist, url)
@@ -165,6 +225,7 @@ def check_compliance(
         "url_checked": url_query,
         "entity_name_checked": name_query,
         "sector": sector,
+        "source": _cache.get("source"),
         "siren_note": (
             "SIREN absent de la liste AMF - a verifier via data.gouv.fr (pilier Identite Legale)"
             if siren else None
