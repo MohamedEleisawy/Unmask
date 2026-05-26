@@ -8,6 +8,7 @@ Docs auto  : http://localhost:8000/docs
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import ALLOWED_ORIGINS
 from app.api.compliance import router as compliance_router
 from app.api.legal_identity import router as legal_identity_router
 from app.api.partnerships import router as partnerships_router
@@ -23,10 +24,11 @@ app = FastAPI(
     version="2.0.0",
 )
 
-# CORS - restreindre en production (jamais * en prod)
+# CORS — origines pilotées par ALLOWED_ORIGINS (CSV) dans .env
+# Dev : "*" par défaut. Prod : "https://unmask.vercel.app,https://app.unmask.fr"
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )

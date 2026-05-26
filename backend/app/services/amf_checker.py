@@ -24,13 +24,13 @@ from typing import Optional
 
 import httpx
 
+from app.config import AMF_CACHE_TTL_SECONDS
 from app.services.amf_models import AmfMatch, ComplianceResult
 
 _DATAGOUV_URL = (
     "https://www.data.gouv.fr/api/1/datasets/r/d2d9df6d-1cd2-41a8-96f5-684cb3057ecb"
 )
 _FALLBACK_CSV = Path(__file__).resolve().parent.parent.parent / "data" / "abeis-liste-noire.csv"
-_CACHE_TTL_SECONDS = 6 * 3600  # rafraichi toutes les 6h
 
 _cache: dict = {"entries": None, "fetched_at": 0.0, "source": None}
 
@@ -113,7 +113,7 @@ def _parse_csv(text: str) -> list[dict]:
 
 def _load_blacklist() -> list[dict]:
     now = time.time()
-    if _cache["entries"] is not None and (now - _cache["fetched_at"]) < _CACHE_TTL_SECONDS:
+    if _cache["entries"] is not None and (now - _cache["fetched_at"]) < AMF_CACHE_TTL_SECONDS:
         return _cache["entries"]
 
     entries: Optional[list[dict]] = None
