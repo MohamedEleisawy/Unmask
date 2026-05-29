@@ -32,8 +32,8 @@ export function YoutubePillar({ data }: { data: PillarData }) {
           ))}
         </div>
       )}
-      {data.channel_url && (
-        <SourceLink href={data.channel_url as string} label="Voir la chaîne YouTube" />
+      {typeof data.channel_url === "string" && (
+        <SourceLink href={data.channel_url} label="Voir la chaîne YouTube" />
       )}
     </div>
   );

@@ -28,7 +28,7 @@ export function CompliancePillar({ data }: { data: PillarData }) {
           ))}
         </div>
       )}
-      {data.warning && <Warning text={data.warning as string} />}
+      {typeof data.warning === "string" && <Warning text={data.warning} />}
       <SourceLink
         href="https://www.abe-infoservice.fr/liste-noire"
         label="abe-infoservice.fr/liste-noire"

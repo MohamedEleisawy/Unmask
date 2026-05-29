@@ -24,10 +24,10 @@ export function LegalPillar({ data }: { data: PillarData }) {
           <InfoRow label="Création" value={identity.date_creation as string} />
         </div>
       )}
-      {identity?.source_url && (
-        <SourceLink href={identity.source_url as string} label="annuaire-entreprises.data.gouv.fr" />
+      {typeof identity?.source_url === "string" && (
+        <SourceLink href={identity.source_url} label="annuaire-entreprises.data.gouv.fr" />
       )}
-      {data.warning && <Warning text={data.warning as string} />}
+      {typeof data.warning === "string" && <Warning text={data.warning} />}
     </div>
   );
 }
