@@ -1,25 +1,7 @@
-import Link from "next/link";
-
 export function LandingNavbar() {
   return (
-    <header className="bg-[#101010] flex items-center justify-between px-4 md:px-10 pt-8 pb-3 w-full border-b border-white/[0.08]">
+    <header className="bg-[#101010] flex items-center px-4 md:px-10 pt-8 pb-3 w-full border-b border-white/[0.08]">
       <LandingLogo />
-      <nav className="hidden md:flex items-center gap-8">
-        <Link href="#how" className="font-landing-body text-[#eee]/60 text-[14px] hover:text-[#eee] transition-colors">
-          Comment ça marche
-        </Link>
-        <Link href="/audit" className="font-landing-body text-[#eee]/60 text-[14px] hover:text-[#eee] transition-colors">
-          Lancer un audit
-        </Link>
-      </nav>
-      <div className="flex items-center gap-4">
-        <button aria-label="Rechercher" className="relative size-6 opacity-60 hover:opacity-100 transition-opacity">
-          <img alt="" className="absolute inset-[12.5%] size-[75%] object-contain" src="/landing/search-icon.svg" />
-        </button>
-        <button aria-label="Informations" className="relative size-6 opacity-60 hover:opacity-100 transition-opacity">
-          <img alt="" className="absolute inset-[8.33%] size-[83%] object-contain" src="/landing/info-icon.svg" />
-        </button>
-      </div>
     </header>
   );
 }
