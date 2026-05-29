@@ -1,5 +1,21 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Quatty";
+  src: url("/fonts/quatty.otf") format("opentype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Satoshi";
+  src: url("/fonts/Satoshi-Variable.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-bg: #09090b;
   --color-surface: #111114;
@@ -17,10 +33,10 @@
   --color-warn: #f5b454;
   --color-bad: #fb7185;
 
-  --font-display: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Satoshi", ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
-  --font-landing-display: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
-  --font-landing-body: var(--font-satoshi), ui-sans-serif, system-ui, sans-serif;
+  --font-landing-display: "Quatty", ui-sans-serif, system-ui, sans-serif;
+  --font-landing-body: "Satoshi", ui-sans-serif, system-ui, sans-serif;
 }
 
 .font-landing-display { font-family: var(--font-landing-display); }

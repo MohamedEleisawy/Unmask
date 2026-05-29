@@ -2,7 +2,7 @@ export function LandingHowItWorks() {
   return (
     <section id="how" className="w-full max-w-[1200px] mx-auto px-4 md:px-10 pb-24">
 
-      <h2 className="font-landing-body font-medium text-[#dcdcdc] text-[24px] md:text-[36px] mb-10 md:mb-14">
+      <h2 className="font-landing-display font-medium text-[#dcdcdc] text-[24px] md:text-[36px] mb-10 md:mb-14">
         Comment ça fonctionne ?
       </h2>
 

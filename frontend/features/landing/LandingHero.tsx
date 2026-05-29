@@ -21,7 +21,7 @@ export function LandingHero() {
 
         {/* Colonne gauche */}
         <div className="flex flex-col items-center md:items-start gap-6 md:max-w-[520px]">
-          <h1 className="font-landing-body font-bold text-[#f84b5f] text-[32px] md:text-[52px] leading-tight tracking-tight">
+          <h1 className="font-landing-display font-bold text-[#f84b5f] text-[32px] md:text-[52px] leading-tight tracking-tight">
             Un feed ne dit<br className="hidden md:block" /> pas tout.
           </h1>
           <p className="font-landing-body text-[#eee]/70 text-[16px] md:text-[18px] leading-relaxed max-w-[340px] md:max-w-[400px]">
