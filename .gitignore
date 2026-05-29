@@ -1,0 +1,16 @@
+data/
+.env
+__pycache__/
+node_modules/
+
+# Python virtualenvs
+.venv/
+venv/
+
+# Python tooling
+.pytest_cache/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
