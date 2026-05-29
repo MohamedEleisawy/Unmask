@@ -1,6 +1,4 @@
 # Unmask
-<<<<<<< HEAD
-=======
 
 PWA d'audit de crédibilité factuel pour influenceurs et marques. Trois critères pondérés vérifiés via des sources publiques officielles (data.gouv.fr, AMF/ACPR, YouTube Data API, Anthropic). Zéro stockage de données personnelles — conforme RGPD.
 
@@ -31,13 +29,14 @@ Les anciens piliers `partnerships` (loi 2023) restent accessibles via `/audit/ma
 
 ### Backend
 
-```bash
+```powershell
 cd backend
 python -m venv .venv
-.venv\Scripts\activate          # Windows
+.venv\Scripts\Activate.ps1      # PowerShell (Windows)
+# .venv\Scripts\activate        # cmd.exe (Windows)
 # source .venv/bin/activate     # macOS/Linux
 pip install -r requirements.txt
-cp .env.example .env            # puis remplir les clés API
+copy .env.example .env          # puis remplir les clés API
 ```
 
 ### Frontend
@@ -118,4 +117,3 @@ Détails dans [`docs/claude/conventions.md`](docs/claude/conventions.md) et [`CL
 ## Engagement
 
 Aucun verdict définitif n'est émis. Toutes les sources sont publiques et traçables. Aucune donnée personnelle stockée — traitement en mémoire vive uniquement.
->>>>>>> cleanup/structure
