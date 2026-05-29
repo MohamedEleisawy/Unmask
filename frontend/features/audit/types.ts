@@ -7,10 +7,22 @@ export type AuditEntity = {
   sector?: string;
 };
 
+export type ScoreBreakdownRow = {
+  key: string;
+  label: string;
+  weight: number;
+  score: number | null;
+  available: boolean;
+  reason: string;
+  effective_weight: number;
+  points: number;
+};
+
 export type AuditResponse = {
   entity: AuditEntity;
   global_score: number;
   verdict: Verdict;
+  score_breakdown?: ScoreBreakdownRow[];
   pillars: Record<string, PillarData | undefined>;
   disclaimer: string;
 };

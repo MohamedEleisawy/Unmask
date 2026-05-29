@@ -12,8 +12,9 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.services.amf_checker import check_compliance
-from app.services.audit_scoring import compute_global_score, verdict_from_score
+from app.services.audit_scoring import compute_breakdown, compute_global_score, verdict_from_score
 from app.services.osint_checker import check_osint_reputation
+from app.services.reputation_analyzer import analyze_reputation
 from app.services.siren_checker import check_legal_identity
 from app.services.social_presence_checker import find_social_presence
 from app.services.youtube_checker import check_youtube_engagement
@@ -49,6 +50,7 @@ def _build_async_tasks(body: FullAuditRequest) -> dict[str, Awaitable]:
 
     if body.entity_name:
         tasks["osint"] = check_osint_reputation(body.entity_name)
+        tasks["reputation"] = analyze_reputation(body.entity_name)
         tasks["social_presence"] = find_social_presence(body.entity_name)
 
     if body.entity_name or body.url:
@@ -95,6 +97,7 @@ async def full_audit(body: FullAuditRequest):
         },
         "global_score": score,
         "verdict": verdict_from_score(score),
+        "score_breakdown": compute_breakdown(pillars),
         "pillars": pillars,
         "disclaimer": _DISCLAIMER,
     }

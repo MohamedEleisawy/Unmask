@@ -1,6 +1,6 @@
 "use client";
 
-import type { AuditResponse, PillarData } from "./types";
+import type { AuditResponse, PillarData, ScoreBreakdownRow } from "./types";
 
 type Props = { results: AuditResponse };
 
@@ -28,13 +28,23 @@ const CRITERIA_DETAILS = [
     }),
   },
   {
-    key: "osint",
+    key: "reputation",
     label: "Réputation publique",
-    getStatus: (d?: PillarData) => ({
-      label: !d ? "Aucune donnée" : (d.alert_count as number) > 0 ? `${d.alert_count} alerte${(d.alert_count as number) > 1 ? "s" : ""}` : "Aucune alerte",
-      color: !d ? "#5a5a5a" : (d.alert_count as number) > 0 ? "#f84b5f" : "#0cdda5",
-      desc: !d ? "Erreur lors de la recherche OSINT." : (d.results as unknown[])?.length > 0 ? "Signaux publics analysés." : "Aucun signal notable détecté.",
-    }),
+    getStatus: (d?: PillarData) => {
+      const harmful = (d?.harmful_count as number) ?? 0;
+      const available = !!d && d.available !== false;
+      return {
+        label: !available
+          ? "Analyse indisponible"
+          : harmful > 0
+            ? `${harmful} article${harmful > 1 ? "s" : ""} défavorable${harmful > 1 ? "s" : ""}`
+            : "Aucune atteinte à l'image",
+        color: !available ? "#5a5a5a" : harmful > 0 ? "#f84b5f" : "#0cdda5",
+        desc: !available
+          ? "L'analyse de presse n'a pas pu être effectuée."
+          : (d?.summary as string) || "Aucun article notable détecté.",
+      };
+    },
   },
   {
     key: "social_presence",
@@ -48,7 +58,7 @@ const CRITERIA_DETAILS = [
 ];
 
 export function AuditResults({ results }: Props) {
-  const { global_score, entity, pillars, disclaimer } = results;
+  const { global_score, entity, pillars, disclaimer, score_breakdown } = results;
   const entityName = entity.name || entity.url || "Entité auditée";
   const scoreColor = global_score >= 70 ? "#0cdda5" : global_score >= 40 ? "#f5b454" : "#f84b5f";
   const scoreLabel = global_score >= 70 ? "Plutôt fiable" : global_score >= 40 ? "Profil suspect" : "Peu fiable";
@@ -165,7 +175,11 @@ export function AuditResults({ results }: Props) {
                     statusColor={status.color}
                     description={status.desc}
                     last={i === CRITERIA_DETAILS.length - 1}
-                  />
+                  >
+                    {criterion.key === "reputation" && data?.available !== false && (
+                      <ReputationDetails data={data} />
+                    )}
+                  </CriterionRow>
                 );
               })}
             </div>
@@ -199,7 +213,7 @@ export function AuditResults({ results }: Props) {
               </span>
               <span className="text-xl mb-1" style={{ color: "#3a3a3a" }}>/100</span>
             </div>
-            <ScoreBreakdown pillars={pillars} />
+            <ScoreBreakdown rows={score_breakdown} />
           </div>
         </div>
 
@@ -262,34 +276,56 @@ function ScoreRing({ score, color }: { score: number; color: string }) {
   );
 }
 
-function ScoreBreakdown({ pillars }: { pillars: Record<string, PillarData | undefined> }) {
-  const items = [
-    { label: "Identité légale", key: "legal_identity", ok: !!(pillars.legal_identity as PillarData | undefined)?.found },
-    { label: "Conformité AMF/ACPR", key: "compliance", ok: !(pillars.compliance as PillarData | undefined)?.is_blacklisted },
-    { label: "Réputation publique", key: "osint", ok: ((pillars.osint as PillarData | undefined)?.alert_count as number ?? 1) === 0 },
-    { label: "Présence en ligne", key: "social_presence", ok: !!pillars.social_presence },
-  ];
+function scoreColor(score: number): string {
+  return score >= 70 ? "#0cdda5" : score >= 40 ? "#f5b454" : "#f84b5f";
+}
+
+function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
+  if (!rows || rows.length === 0) return null;
 
   return (
-    <ul className="flex flex-col gap-2">
-      {items.map(({ label, key, ok }) => {
-        const available = !!pillars[key];
-        return (
-          <li key={key} className="flex items-center justify-between gap-3">
-            <span className="text-xs truncate" style={{ color: "#5a5a5a" }}>{label}</span>
-            <span
-              className="text-[10px] font-medium shrink-0 px-2 py-0.5 rounded-full"
-              style={{
-                color: available ? (ok ? "#0cdda5" : "#f84b5f") : "#3a3a3a",
-                background: available ? (ok ? "#0cdda511" : "#f84b5f11") : "#1e1e1e",
-              }}
-            >
-              {available ? (ok ? "OK" : "Alerte") : "N/A"}
-            </span>
-          </li>
-        );
-      })}
-    </ul>
+    <div className="flex flex-col gap-3">
+      <p className="text-[10px] uppercase tracking-widest" style={{ color: "#3a3a3a" }}>
+        Barème par critère
+      </p>
+      <ul className="flex flex-col gap-3">
+        {rows.map((r) => {
+          const color = r.available && r.score !== null ? scoreColor(r.score) : "#3a3a3a";
+          return (
+            <li key={r.key} className="flex flex-col gap-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs truncate" style={{ color: "#8a8a8a" }}>{r.label}</span>
+                <span className="text-[10px] shrink-0" style={{ color: "#4a4a4a" }}>
+                  poids {r.effective_weight}%
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#1e1e1e" }}>
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${r.available && r.score !== null ? r.score : 0}%`, background: color }}
+                  />
+                </div>
+                <span className="text-[11px] font-medium tabular-nums shrink-0 w-12 text-right" style={{ color }}>
+                  {r.available && r.score !== null ? `${r.score}/100` : "N/A"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] leading-snug" style={{ color: "#4a4a4a" }}>
+                  {r.reason}
+                </span>
+                <span className="text-[10px] tabular-nums shrink-0" style={{ color: "#5a5a5a" }}>
+                  {r.available ? `+${r.points} pts` : "—"}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="text-[10px] leading-relaxed pt-1 border-t" style={{ color: "#3a3a3a", borderColor: "#1e1e1e" }}>
+        Score global = somme des points. Les critères non calculables redistribuent leur poids sur les autres.
+      </p>
+    </div>
   );
 }
 
@@ -423,28 +459,121 @@ function CriterionRow({
   statusColor,
   description,
   last,
+  children,
 }: {
   label: string;
   statusLabel: string;
   statusColor: string;
   description: string;
   last: boolean;
+  children?: React.ReactNode;
 }) {
   return (
     <div
-      className={`flex items-start justify-between gap-6 px-5 py-4 ${!last ? "border-b" : ""}`}
+      className={`flex flex-col px-5 py-4 ${!last ? "border-b" : ""}`}
       style={{ background: "#141414", borderColor: "#1e1e1e" }}
     >
-      <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-        <span className="text-sm font-medium" style={{ color: "#8a8a8a" }}>{label}</span>
-        <span className="text-xs leading-relaxed" style={{ color: "#4a4a4a" }}>{description}</span>
+      <div className="flex items-start justify-between gap-6">
+        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+          <span className="text-sm font-medium" style={{ color: "#8a8a8a" }}>{label}</span>
+          <span className="text-xs leading-relaxed" style={{ color: "#4a4a4a" }}>{description}</span>
+        </div>
+        <span
+          className="text-xs font-semibold shrink-0 mt-0.5 px-2.5 py-1 rounded-full"
+          style={{ color: statusColor, background: `${statusColor}14` }}
+        >
+          {statusLabel}
+        </span>
       </div>
-      <span
-        className="text-xs font-semibold shrink-0 mt-0.5 px-2.5 py-1 rounded-full"
-        style={{ color: statusColor, background: `${statusColor}14` }}
-      >
-        {statusLabel}
-      </span>
+      {children}
+    </div>
+  );
+}
+
+const IMPACT_META: Record<string, { label: string; color: string }> = {
+  harmful: { label: "Défavorable", color: "#f84b5f" },
+  neutral: { label: "Neutre", color: "#6a6a6a" },
+  favorable: { label: "Favorable", color: "#0cdda5" },
+};
+
+function ReputationDetails({ data }: { data: PillarData | undefined }) {
+  type Article = { title: string; url: string; impact: string; reason: string };
+  type Source = { label: string; url: string };
+  const articles = ((data?.articles as Article[]) || []).slice(0, 6);
+  const sources = ((data?.sources as Source[]) || []).slice(0, 12);
+  const rationale = (data?.score_rationale as string) || "";
+
+  if (articles.length === 0 && sources.length === 0 && !rationale) return null;
+
+  return (
+    <div className="flex flex-col gap-4 mt-4 pt-4 border-t" style={{ borderColor: "#1e1e1e" }}>
+      {rationale && (
+        <p className="text-[11px] leading-relaxed px-3 py-2 rounded-lg" style={{ color: "#8a8a8a", background: "#1a1a1a" }}>
+          <span className="font-semibold" style={{ color: "#aaa" }}>Justification du score : </span>
+          {rationale}
+        </p>
+      )}
+      {articles.length > 0 && (
+        <div className="flex flex-col gap-2">
+          {articles.map((a, i) => {
+            const meta = IMPACT_META[a.impact] ?? IMPACT_META.neutral;
+            return (
+              <div key={i} className="border-l-2 pl-3 py-0.5" style={{ borderColor: meta.color }}>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {a.url ? (
+                    <a
+                      href={a.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs font-medium leading-snug transition-opacity hover:opacity-70"
+                      style={{ color: "#cfcfcf" }}
+                    >
+                      {a.title}
+                    </a>
+                  ) : (
+                    <span className="text-xs font-medium leading-snug" style={{ color: "#cfcfcf" }}>
+                      {a.title}
+                    </span>
+                  )}
+                  <span
+                    className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
+                    style={{ color: meta.color, background: `${meta.color}14` }}
+                  >
+                    {meta.label}
+                  </span>
+                </div>
+                {a.reason && (
+                  <p className="text-xs mt-1 leading-relaxed line-clamp-2" style={{ color: "#5a5a5a" }}>
+                    {a.reason}
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {sources.length > 0 && (
+        <div>
+          <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{ color: "#3a3a3a" }}>
+            Sources analysées ({sources.length})
+          </p>
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {sources.map((s, i) => (
+              <a
+                key={i}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] underline decoration-dotted underline-offset-2 transition-colors hover:opacity-70"
+                style={{ color: "#6a6a6a" }}
+              >
+                {s.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

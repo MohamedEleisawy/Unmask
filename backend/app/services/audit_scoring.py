@@ -42,39 +42,114 @@ def _extract_osint(p: dict) -> Optional[int]:
     return p.get("reputation_score")
 
 
+def _extract_reputation(p: dict) -> Optional[int]:
+    """Score d'analyse mediatique Claude (analyse raisonnee des articles)."""
+    if not p or not p.get("available"):
+        return None
+    return p.get("reputation_score")
+
+
+def _reputation_signal_score(pillars: dict) -> Optional[int]:
+    """Score du signal 'reputation mediatique'.
+
+    Claude + recherche web (analyse raisonnee des articles) porte le score ;
+    l'OSINT Serper (comptage de mots-cles) sert de fallback quand Claude
+    est indisponible.
+    """
+    reasoned = _extract_reputation(pillars.get("reputation") or {})
+    if reasoned is not None:
+        return reasoned
+    return _extract_osint(pillars.get("osint") or {})
+
+
 def _reputation_group_score(pillars: dict) -> Optional[int]:
-    """Moyenne des sous-signaux disponibles : osint, youtube."""
+    """Moyenne des sous-signaux disponibles : reputation mediatique, youtube."""
     parts: list[int] = []
-    for key, extractor in (("osint", _extract_osint), ("youtube", _extract_youtube)):
-        score = extractor(pillars.get(key) or {})
-        if score is not None:
-            parts.append(score)
+    rep = _reputation_signal_score(pillars)
+    if rep is not None:
+        parts.append(rep)
+    yt = _extract_youtube(pillars.get("youtube") or {})
+    if yt is not None:
+        parts.append(yt)
     if not parts:
         return None
     return round(sum(parts) / len(parts))
 
 
+def _legal_reason(p: dict, score: Optional[int]) -> str:
+    if score is None:
+        return "Non calcule : aucune societe trouvee pour les inputs fournis."
+    return "Entite identifiee dans l'annuaire des entreprises." if score >= 100 \
+        else "Aucune structure juridique trouvee (personne physique ou entite absente du registre)."
+
+
+def _compliance_reason(p: dict, score: Optional[int]) -> str:
+    if score is None:
+        return "Non calcule : ni URL ni nom d'entite exploitable."
+    return "Hors liste noire AMF/ACPR." if score >= 100 \
+        else "Presente sur la liste noire AMF/ACPR — alerte reglementaire majeure."
+
+
+def _reputation_reason(pillars: dict, score: Optional[int]) -> str:
+    if score is None:
+        return "Non calcule : aucun nom d'entite fourni pour l'analyse mediatique."
+    rep = pillars.get("reputation") or {}
+    if rep.get("available"):
+        rationale = rep.get("score_rationale") or ""
+        harmful = rep.get("harmful_count", 0)
+        base = f"Analyse de presse (Claude + recherche web) : {harmful} article(s) defavorable(s) directement lie(s) a l'entite."
+        return f"{base} {rationale}".strip()
+    return "Analyse de presse indisponible — repli sur les signaux OSINT bruts (comptage de mots-cles)."
+
+
+# (cle pilier, libelle, poids, extracteur de score, justificateur)
+_CRITERIA = (
+    ("legal_identity", "Identite legale verifiable", WEIGHTS["legal"], _extract_legal, _legal_reason),
+    ("compliance", "Conformite AMF/ACPR", WEIGHTS["compliance"], _extract_compliance, _compliance_reason),
+    ("reputation", "Reputation publique", WEIGHTS["reputation_group"], None, _reputation_reason),
+)
+
+
+def compute_breakdown(pillars: dict) -> list[dict]:
+    """Detail transparent du calcul : poids, score, contribution et justification par critere.
+
+    Le poids effectif est le poids redistribue sur les seuls criteres calculables.
+    """
+    rows: list[dict] = []
+    for key, label, weight, extractor, reasoner in _CRITERIA:
+        if key == "reputation":
+            score = _reputation_group_score(pillars)
+            reason = _reputation_reason(pillars, score)
+        else:
+            score = extractor(pillars.get(key) or {})
+            reason = reasoner(pillars.get(key) or {}, score)
+        rows.append({
+            "key": key,
+            "label": label,
+            "weight": weight,
+            "score": score,
+            "available": score is not None,
+            "reason": reason,
+        })
+
+    total = sum(r["weight"] for r in rows if r["available"]) or 1
+    for r in rows:
+        if r["available"]:
+            r["effective_weight"] = round(r["weight"] / total * 100)
+            r["points"] = round(r["score"] * r["weight"] / total)
+        else:
+            r["effective_weight"] = 0
+            r["points"] = 0
+    return rows
+
+
 def compute_global_score(pillars: dict) -> int:
-    """Score 0-100 = moyenne ponderee des 3 criteres disponibles."""
-    contributions: list[tuple[int, int]] = []
-
-    legal = _extract_legal(pillars.get("legal_identity") or {})
-    if legal is not None:
-        contributions.append((legal, WEIGHTS["legal"]))
-
-    compliance = _extract_compliance(pillars.get("compliance") or {})
-    if compliance is not None:
-        contributions.append((compliance, WEIGHTS["compliance"]))
-
-    reputation = _reputation_group_score(pillars)
-    if reputation is not None:
-        contributions.append((reputation, WEIGHTS["reputation_group"]))
-
-    if not contributions:
+    """Score 0-100 = moyenne ponderee des criteres disponibles."""
+    rows = [r for r in compute_breakdown(pillars) if r["available"]]
+    if not rows:
         return 50
-
-    total_weight = sum(w for _, w in contributions)
-    weighted_sum = sum(score * w for score, w in contributions)
+    total_weight = sum(r["weight"] for r in rows)
+    weighted_sum = sum(r["score"] * r["weight"] for r in rows)
     return round(weighted_sum / total_weight)
 
 

@@ -5,6 +5,7 @@ import { ScoreHeader } from "./ScoreHeader";
 import { CompliancePillar } from "./pillars/CompliancePillar";
 import { LegalPillar } from "./pillars/LegalPillar";
 import { OsintPillar } from "./pillars/OsintPillar";
+import { ReputationPillar } from "./pillars/ReputationPillar";
 import { SocialPresencePillar } from "./pillars/SocialPresencePillar";
 import { YoutubePillar } from "./pillars/YoutubePillar";
 import type { AuditResponse, PillarData } from "./types";
@@ -52,13 +53,19 @@ const CRITERIA: Criterion[] = [
   {
     number: "3",
     title: "Réputation publique & signaux externes",
-    subtitle: "OSINT (presse, signalements) · cohérence YouTube · 25 pts",
+    subtitle: "Analyse de presse (Gemini) · OSINT · cohérence YouTube · 25 pts",
     weight: 25,
-    primaryKey: "osint",
-    primaryRender: (d) => <OsintPillar data={d} />,
+    primaryKey: "reputation",
+    primaryRender: (d) => <ReputationPillar data={d} />,
     fallbackMessage:
-      "Aucun nom d'entité fourni — la recherche de signaux publics nécessite un nom ou un @handle.",
+      "Aucun nom d'entité fourni — l'analyse des articles de presse nécessite un nom ou un @handle.",
     subSignals: [
+      {
+        key: "osint",
+        title: "Signaux OSINT bruts",
+        subtitle: "Serper.dev / Google CSE",
+        render: (d) => <OsintPillar data={d} />,
+      },
       {
         key: "youtube",
         title: "Cohérence YouTube",
