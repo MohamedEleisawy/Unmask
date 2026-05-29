@@ -25,8 +25,6 @@ _PLATFORMS: list[tuple[str, str]] = [
     ("TikTok", "tiktok.com"),
     ("YouTube", "youtube.com"),
     ("X (Twitter)", "x.com"),
-    ("LinkedIn", "linkedin.com"),
-    ("Facebook", "facebook.com"),
 ]
 
 

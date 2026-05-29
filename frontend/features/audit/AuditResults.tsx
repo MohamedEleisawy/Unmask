@@ -294,9 +294,15 @@ function ScoreBreakdown({ pillars }: { pillars: Record<string, PillarData | unde
 }
 
 function SocialRow({ platform, url }: { platform: string; url: string | null }) {
-  const handle = url
-    ? url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "").split("/").pop() || platform
-    : platform;
+  const platformLabel = platform.toLowerCase().includes("instagram")
+    ? "Instagram"
+    : platform.toLowerCase().includes("tiktok")
+      ? "TikTok"
+      : platform.toLowerCase().includes("youtube")
+        ? "YouTube"
+        : platform.toLowerCase().includes("x")
+          ? "X (Twitter)"
+          : platform;
 
   return (
     <div
@@ -311,7 +317,7 @@ function SocialRow({ platform, url }: { platform: string; url: string | null }) 
           <SocialIcon platform={platform} />
         </div>
         <span className="text-sm font-medium" style={{ color: "#6a6a6a" }}>
-          @{handle}
+          {platformLabel}
         </span>
       </div>
       {url && (
