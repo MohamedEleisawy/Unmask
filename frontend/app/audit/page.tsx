@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AuditResults } from "@/features/audit/AuditResults";
 import { fetchFullAudit } from "@/features/audit/api";
 import type { AuditResponse } from "@/features/audit/types";
 
 export default function AuditPage() {
+  return (
+    <Suspense>
+      <AuditPageInner />
+    </Suspense>
+  );
+}
+
+function AuditPageInner() {
   const params = useSearchParams();
   const router = useRouter();
   const query = params.get("q") ?? "";
