@@ -14,3 +14,7 @@ venv/
 # IDE
 .vscode/
 .idea/
+
+# Logs
+*.log
+log.txt
