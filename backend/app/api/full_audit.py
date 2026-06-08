@@ -89,7 +89,7 @@ async def full_audit(body: FullAuditRequest):
     pillars = await _run_pillars(body)
     audit_trail = build_audit_trail(pillars)
     timeline = build_timeline(pillars)
-    score = compute_global_score(pillars, audit_trail)
+    score = compute_global_score(pillars)
 
     return {
         "entity": {
@@ -100,7 +100,7 @@ async def full_audit(body: FullAuditRequest):
         },
         "global_score": score,
         "verdict": verdict_from_score(score),
-        "score_breakdown": compute_breakdown(pillars, audit_trail),
+        "score_breakdown": compute_breakdown(pillars),
         "audit_trail": audit_trail,
         "timeline": timeline,
         "pillars": pillars,

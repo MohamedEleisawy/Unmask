@@ -7,25 +7,28 @@ L'absence d'information n'est JAMAIS un signal négatif :
     les autres critères — il n'est pas mis à 0 ;
   • l'absence d'entreprise, de réseau ou d'article ne retire aucun point.
 
-Critères et poids :
-  • Identité numérique ......... 20  (nom, photo, présence publique, réseaux)
-  • Réseaux sociaux officiels .. 20  (Instagram / TikTok / YouTube / X)
+Critères et poids (uniquement des signaux RÉELLEMENT vérifiables) :
+  • Identité numérique ......... 25  (nom, photo, présence publique, réseaux)
+  • Réseaux sociaux officiels .. 25  (Instagram / TikTok / YouTube / X)
   • Réputation publique ........ 30  (presse, signalements, enquêtes, condamnations)
-  • Vérifications réglementaires 15  (AMF / ACPR)
-  • Transparence de l'audit .... 15  (étendue des sources + preuves collectées)
+  • Vérifications réglementaires 20  (AMF / ACPR)
 
-L'entreprise (SIREN/SIRET…) est purement DESCRIPTIVE : elle n'entre plus dans
+Volontairement EXCLUS du score (non vérifiables de façon fiable, éviteraient de
+« deviner ») : transparence des partenariats, cohérence d'engagement, et tout
+critère dépendant d'un scraping inaccessible.
+
+L'entreprise (SIREN/SIRET…) est purement DESCRIPTIVE : elle n'entre pas dans
 le score (un créateur sans structure déclarée peut être parfaitement légitime).
 """
 
 from typing import Optional
 
+# Poids centralisés — toute la logique de pondération est ici, nulle part ailleurs.
 WEIGHTS = {
-    "digital_identity": 20,
-    "social": 20,
+    "digital_identity": 25,
+    "social": 25,
     "reputation": 30,
-    "regulatory": 15,
-    "transparency": 15,
+    "regulatory": 20,
 }
 
 
@@ -148,52 +151,25 @@ def _regulatory(pillars: dict) -> tuple[Optional[int], str, list[str]]:
 
 
 # ---------------------------------------------------------------------------
-# 5. Transparence de l'audit (15)
-# ---------------------------------------------------------------------------
-
-def _transparency(audit_trail: Optional[list]) -> tuple[Optional[int], str, list[str]]:
-    if not audit_trail:
-        return None, "Non évalué : aucun journal de sources.", []
-
-    consulted = [t for t in audit_trail if t.get("consulted")]
-    verified = [t for t in consulted if t.get("verified")]
-    evidence = sum(1 for t in audit_trail if t.get("evidence_url"))
-
-    # Étendue (nombre de catégories de sources consultées, idéal ≈ 6) +
-    # preuves vérifiables collectées (URLs). Moyenne des deux.
-    breadth = min(1.0, len(consulted) / 6)
-    evidence_ratio = min(1.0, evidence / 4)
-    score = round(100 * (0.5 * breadth + 0.5 * evidence_ratio))
-    reason = (
-        f"{len(consulted)} source(s) consultée(s), {len(verified)} avec résultat exploitable, "
-        f"{evidence} preuve(s) vérifiable(s)."
-    )
-    details = [f"{len(consulted)} sources consultées", f"{evidence} preuves (URLs)"]
-    return score, reason, details
-
-
-# ---------------------------------------------------------------------------
 # Agrégation
 # ---------------------------------------------------------------------------
 
-# (clé, libellé, poids, fonction)
-def _evaluate(pillars: dict, audit_trail: Optional[list]) -> dict:
+def _evaluate(pillars: dict) -> dict:
     return {
         "digital_identity": (_digital_identity(pillars), "Identité numérique"),
         "social": (_social(pillars), "Réseaux sociaux officiels"),
         "reputation": (_reputation(pillars), "Réputation publique"),
         "regulatory": (_regulatory(pillars), "Vérifications réglementaires"),
-        "transparency": (_transparency(audit_trail), "Transparence de l'audit"),
     }
 
 
-def compute_breakdown(pillars: dict, audit_trail: Optional[list] = None) -> list[dict]:
+def compute_breakdown(pillars: dict) -> list[dict]:
     """Détail transparent : poids, score, contribution et justification par critère.
 
     Le poids effectif est redistribué sur les seuls critères évaluables :
     un critère non évaluable n'est jamais compté comme 0.
     """
-    evaluated = _evaluate(pillars, audit_trail)
+    evaluated = _evaluate(pillars)
     rows: list[dict] = []
     for key, ((score, reason, details), label) in evaluated.items():
         rows.append({
@@ -217,9 +193,9 @@ def compute_breakdown(pillars: dict, audit_trail: Optional[list] = None) -> list
     return rows
 
 
-def compute_global_score(pillars: dict, audit_trail: Optional[list] = None) -> int:
+def compute_global_score(pillars: dict) -> int:
     """Score 0-100 = moyenne pondérée des critères évaluables."""
-    rows = [r for r in compute_breakdown(pillars, audit_trail) if r["available"]]
+    rows = [r for r in compute_breakdown(pillars) if r["available"]]
     if not rows:
         return 50
     total_weight = sum(r["weight"] for r in rows)
