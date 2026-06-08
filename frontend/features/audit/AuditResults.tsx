@@ -40,6 +40,21 @@ export function AuditResults({ results }: Props) {
   return (
     <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-8 pb-16">
 
+      {/* Barre d'actions */}
+      <div className="flex justify-end mb-4 print:hidden">
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="flex items-center gap-2 text-sm font-medium rounded-xl px-4 py-2 border transition-colors hover:border-[#3a3a3a]"
+          style={{ background: "#141414", borderColor: "#1e1e1e", color: "#cfcfcf" }}
+        >
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+            <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="#0cdda5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          Télécharger le rapport PDF
+        </button>
+      </div>
+
       {/* Layout desktop: 2 colonnes */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-12 items-start">
 
@@ -155,6 +170,9 @@ export function AuditResults({ results }: Props) {
             <ReputationSection data={reputationData} />
           </section>
 
+          {/* Preuves trouvées — uniquement les contenus concernant réellement la personne */}
+          <EvidenceSection data={reputationData} />
+
           {/* Chronologie reconstruite à partir des articles datés */}
           {timeline && timeline.entries.length > 0 && (
             <section className="flex flex-col gap-4">
@@ -163,12 +181,22 @@ export function AuditResults({ results }: Props) {
             </section>
           )}
 
-          {/* Journal des sources consultées */}
+          {/* Sources techniques consultées — repliable, distinct des preuves */}
           {audit_trail && audit_trail.length > 0 && (
-            <section className="flex flex-col gap-4">
-              <SectionTitle>Sources analysées ({audit_trail.length})</SectionTitle>
-              <AuditTrailView trail={audit_trail} />
-            </section>
+            <details className="group rounded-2xl border" style={{ background: "#141414", borderColor: "#1e1e1e" }}>
+              <summary
+                className="flex items-center justify-between gap-2 px-5 py-3 cursor-pointer select-none text-sm font-semibold list-none"
+                style={{ color: "#6a6a6a" }}
+              >
+                <span>Sources techniques consultées ({audit_trail.length})</span>
+                <svg className="transition-transform group-open:rotate-180" width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M6 9l6 6 6-6" stroke="#6a6a6a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </summary>
+              <div className="px-2 pb-2">
+                <AuditTrailView trail={audit_trail} />
+              </div>
+            </details>
           )}
 
           {/* Disclaimer */}
@@ -204,6 +232,9 @@ export function AuditResults({ results }: Props) {
         </div>
 
       </div>
+
+      {/* Rapport imprimable (masqué à l'écran, visible à l'impression / export PDF) */}
+      <PrintableReport results={results} />
     </div>
   );
 }
@@ -503,26 +534,51 @@ function ReputationSection({ data }: { data?: PillarData }) {
       </div>
     );
   }
-  const harmful = (data?.harmful_count as number) ?? 0;
+  const articles = (data?.articles as { impact?: string }[] | undefined) ?? [];
+  const fav = articles.filter((a) => a.impact === "favorable").length;
+  const neu = articles.filter((a) => a.impact === "neutral").length;
+  const harm = articles.filter((a) => a.impact === "harmful").length;
+  const n = articles.length;
   const summary = (data?.summary as string) || "Aucun article notable détecté.";
-  const color = harmful > 0 ? "#f84b5f" : "#0cdda5";
-  const statusLabel = harmful > 0
-    ? `${harmful} article${harmful > 1 ? "s" : ""} défavorable${harmful > 1 ? "s" : ""}`
-    : "Aucune mise en cause directe";
+  const rationale = (data?.score_rationale as string) || "";
+  const color = harm > 0 ? "#f84b5f" : "#0cdda5";
 
   return (
-    <div className="rounded-2xl p-5 border flex flex-col" style={{ background: "#141414", borderColor: "#1e1e1e" }}>
+    <div className="rounded-2xl p-5 border flex flex-col gap-3" style={{ background: "#141414", borderColor: "#1e1e1e" }}>
       <div className="flex items-start justify-between gap-4">
         <p className="text-xs leading-relaxed flex-1" style={{ color: "#8a8a8a" }}>{summary}</p>
         <span
           className="text-xs font-semibold shrink-0 px-2.5 py-1 rounded-full"
           style={{ color, background: `${color}14` }}
         >
-          {statusLabel}
+          {n} article{n > 1 ? "s" : ""} trouvé{n > 1 ? "s" : ""}
         </span>
       </div>
-      <ReputationDetails data={data} />
+      {n > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <ImpactChip color="#0cdda5" n={fav} label="favorable" />
+          <ImpactChip color="#8a8a8a" n={neu} label="neutre" />
+          <ImpactChip color="#f84b5f" n={harm} label="défavorable" />
+        </div>
+      )}
+      {rationale && (
+        <p className="text-[11px] leading-relaxed px-3 py-2 rounded-lg" style={{ color: "#8a8a8a", background: "#1a1a1a" }}>
+          <span className="font-semibold" style={{ color: "#aaa" }}>Justification du score : </span>
+          {rationale}
+        </p>
+      )}
     </div>
+  );
+}
+
+function ImpactChip({ color, n, label }: { color: string; n: number; label: string }) {
+  return (
+    <span
+      className="text-[11px] font-medium px-2 py-0.5 rounded-full"
+      style={{ color, background: `${color}14` }}
+    >
+      {n} {label}{n > 1 ? "s" : ""}
+    </span>
   );
 }
 
@@ -620,84 +676,217 @@ const IMPACT_META: Record<string, { label: string; color: string }> = {
   favorable: { label: "Favorable", color: "#0cdda5" },
 };
 
-function ReputationDetails({ data }: { data: PillarData | undefined }) {
-  type Article = { title: string; url: string; impact: string; reason: string };
-  type Source = { label: string; url: string };
-  const articles = ((data?.articles as Article[]) || []).slice(0, 6);
-  const sources = ((data?.sources as Source[]) || []).slice(0, 12);
-  const rationale = (data?.score_rationale as string) || "";
+function mediaName(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+}
 
-  if (articles.length === 0 && sources.length === 0 && !rationale) return null;
+type EvidenceArticle = {
+  title: string;
+  url: string;
+  impact: string;
+  reason: string;
+  event_type?: string;
+  year?: number | null;
+};
+
+function EvidenceSection({ data }: { data?: PillarData }) {
+  const available = !!data && data.available !== false;
+  if (!available) return null;
+  const articles = (data?.articles as EvidenceArticle[] | undefined) ?? [];
+  if (articles.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-4 mt-4 pt-4 border-t" style={{ borderColor: "#1e1e1e" }}>
-      {rationale && (
-        <p className="text-[11px] leading-relaxed px-3 py-2 rounded-lg" style={{ color: "#8a8a8a", background: "#1a1a1a" }}>
-          <span className="font-semibold" style={{ color: "#aaa" }}>Justification du score : </span>
-          {rationale}
-        </p>
-      )}
-      {articles.length > 0 && (
-        <div className="flex flex-col gap-2">
-          {articles.map((a, i) => {
-            const meta = IMPACT_META[a.impact] ?? IMPACT_META.neutral;
-            return (
-              <div key={i} className="border-l-2 pl-3 py-0.5" style={{ borderColor: meta.color }}>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {a.url ? (
-                    <a
-                      href={a.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs font-medium leading-snug transition-opacity hover:opacity-70"
-                      style={{ color: "#cfcfcf" }}
-                    >
-                      {a.title}
-                    </a>
-                  ) : (
-                    <span className="text-xs font-medium leading-snug" style={{ color: "#cfcfcf" }}>
-                      {a.title}
-                    </span>
-                  )}
-                  <span
-                    className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
-                    style={{ color: meta.color, background: `${meta.color}14` }}
-                  >
-                    {meta.label}
-                  </span>
-                </div>
-                {a.reason && (
-                  <p className="text-xs mt-1 leading-relaxed line-clamp-2" style={{ color: "#5a5a5a" }}>
-                    {a.reason}
-                  </p>
-                )}
+    <section className="flex flex-col gap-4">
+      <SectionTitle>Preuves trouvées ({articles.length})</SectionTitle>
+      <div className="flex flex-col gap-2">
+        {articles.map((a, i) => {
+          const meta = IMPACT_META[a.impact] ?? IMPACT_META.neutral;
+          const media = mediaName(a.url);
+          return (
+            <div
+              key={i}
+              className="rounded-xl border p-4 flex flex-col gap-1.5 border-l-2"
+              style={{ background: "#141414", borderColor: "#1e1e1e", borderLeftColor: meta.color }}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[11px] font-medium" style={{ color: "#8a8a8a" }}>{media || "Source"}</span>
+                {!!a.year && <span className="text-[11px]" style={{ color: "#5a5a5a" }}>· {a.year}</span>}
+                <span
+                  className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
+                  style={{ color: meta.color, background: `${meta.color}14` }}
+                >
+                  {meta.label}
+                </span>
               </div>
-            );
-          })}
-        </div>
-      )}
+              {a.url ? (
+                <a
+                  href={a.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium leading-snug transition-opacity hover:opacity-70"
+                  style={{ color: "#cfcfcf" }}
+                >
+                  {a.title}
+                </a>
+              ) : (
+                <span className="text-sm font-medium leading-snug" style={{ color: "#cfcfcf" }}>{a.title}</span>
+              )}
+              {a.reason && (
+                <p className="text-xs leading-relaxed" style={{ color: "#6a6a6a" }}>{a.reason}</p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
 
-      {sources.length > 0 && (
-        <div>
-          <p className="text-[10px] uppercase tracking-widest mb-1.5" style={{ color: "#3a3a3a" }}>
-            Sources analysées ({sources.length})
-          </p>
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
-            {sources.map((s, i) => (
-              <a
-                key={i}
-                href={s.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[11px] underline decoration-dotted underline-offset-2 transition-colors hover:opacity-70"
-                style={{ color: "#6a6a6a" }}
-              >
-                {s.label}
-              </a>
+/* ---- Rapport PDF imprimable (thème clair, 1-2 pages) ---- */
+
+function verdictLabel(score: number): string {
+  return score >= 70 ? "Profil vérifié" : score >= 40 ? "Partiellement vérifié" : "Peu d'éléments vérifiables";
+}
+
+function PrintableReport({ results }: { results: AuditResponse }) {
+  const { global_score, entity, pillars, score_breakdown, audit_trail } = results;
+  const name = (entity.name || entity.url || "Entité auditée").replace(/^@/, "");
+
+  const resolved = pillars.identity_resolution as PillarData | undefined;
+  const realName = (resolved?.real_name as string) || null;
+  const photo = (resolved?.image_url as string) || null;
+
+  const social = pillars.social_presence as PillarData | undefined;
+  const foundHits = ((social?.hits as SocialHit[] | undefined) ?? []).filter((h) => h.found);
+
+  const legal = pillars.legal_identity as PillarData | undefined;
+  const identity = legal?.identity as Record<string, unknown> | null | undefined;
+  const legalFound = !!legal?.found && !!identity;
+
+  const reputation = pillars.reputation as PillarData | undefined;
+  const repAvailable = !!reputation && reputation.available !== false;
+  const articles = (reputation?.articles as EvidenceArticle[] | undefined) ?? [];
+  const harmful = articles.filter((a) => a.impact === "harmful");
+
+  const accent = global_score >= 70 ? "#0a8f6a" : global_score >= 40 ? "#b67d10" : "#c0392b";
+
+  const h2: React.CSSProperties = { fontSize: 12, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#666", margin: "14px 0 6px" };
+  const card: React.CSSProperties = { border: "1px solid #e2e2e2", borderRadius: 8, padding: "8px 12px" };
+  const small: React.CSSProperties = { fontSize: 11, color: "#444", lineHeight: 1.4 };
+
+  return (
+    <div className="print-report" style={{ fontFamily: "Arial, Helvetica, sans-serif", fontSize: 12, color: "#111", padding: 4 }}>
+      {/* En-tête */}
+      <div style={{ display: "flex", alignItems: "center", gap: 16, borderBottom: "2px solid #111", paddingBottom: 12 }}>
+        {photo && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt={name} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover" }} />
+        )}
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase", color: "#888" }}>Rapport d’audit Unmask</div>
+          <div style={{ fontSize: 22, fontWeight: 800 }}>@{name}</div>
+          {realName && realName.toLowerCase() !== name.toLowerCase() && (
+            <div style={{ fontSize: 12, color: "#555" }}>Identité : {realName}</div>
+          )}
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: 34, fontWeight: 800, color: accent, lineHeight: 1 }}>{global_score}<span style={{ fontSize: 16, color: "#999" }}>/100</span></div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: accent }}>{verdictLabel(global_score)}</div>
+        </div>
+      </div>
+
+      {/* Score par critère */}
+      {score_breakdown && score_breakdown.length > 0 && (
+        <>
+          <div style={h2}>Score de crédibilité</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+            {score_breakdown.map((r) => (
+              <div key={r.key} style={{ ...small, display: "flex", justifyContent: "space-between", gap: 8 }}>
+                <span>{r.label}</span>
+                <strong>{r.available && r.score !== null ? `${r.score}/100` : "Non évalué"}</strong>
+              </div>
             ))}
           </div>
-        </div>
+        </>
       )}
+
+      {/* Réseaux sociaux */}
+      <div style={h2}>Réseaux sociaux officiels</div>
+      {foundHits.length > 0 ? (
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+          {foundHits.map((h) => (
+            <div key={h.platform} style={{ ...small }}>
+              <strong>{platformLabel(h.platform)}</strong> @{(h.username || "").replace(/^@/, "")}
+              {" · "}{h.official ? "officiel" : "probable"} ({h.confidence}%)
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={small}>Aucun compte officiel confirmé.</div>
+      )}
+
+      {/* Entreprise */}
+      <div style={h2}>Entreprise associée</div>
+      {legalFound && identity ? (
+        <div style={{ ...card, ...small, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px" }}>
+          <span>Nom : <strong>{String(identity.nom ?? name)}</strong></span>
+          {!!identity.siren && <span>SIREN : {String(identity.siren)}</span>}
+          {!!identity.siret && <span>SIRET : {String(identity.siret)}</span>}
+          {!!identity.forme_juridique && <span>Statut : {String(identity.forme_juridique)}</span>}
+          {!!identity.date_creation && <span>Création : {String(identity.date_creation).slice(0, 10)}</span>}
+          {!!identity.dirigeant && <span>Dirigeant : {String(identity.dirigeant)}</span>}
+          {!!identity.activite && <span style={{ gridColumn: "1 / -1" }}>Activité : {String(identity.activite)}</span>}
+        </div>
+      ) : (
+        <div style={small}>Aucune entreprise identifiée dans les bases publiques consultées.</div>
+      )}
+
+      {/* Réputation publique */}
+      <div style={h2}>Réputation publique</div>
+      {repAvailable ? (
+        <div style={small}>
+          <div>{(reputation?.summary as string) || "Aucun article notable détecté."}</div>
+          <div style={{ marginTop: 4 }}>
+            <strong>{articles.length}</strong> article(s) — {articles.filter((a) => a.impact === "favorable").length} favorable(s), {articles.filter((a) => a.impact === "neutral").length} neutre(s), {harmful.length} défavorable(s)
+          </div>
+        </div>
+      ) : (
+        <div style={small}>Analyse de réputation indisponible (non pénalisant).</div>
+      )}
+
+      {/* Principales alertes */}
+      {harmful.length > 0 && (
+        <>
+          <div style={h2}>Principales alertes</div>
+          <ul style={{ ...small, margin: 0, paddingLeft: 16 }}>
+            {harmful.slice(0, 5).map((a, i) => (
+              <li key={i} style={{ marginBottom: 2 }}>
+                <strong>{mediaName(a.url) || "Source"}{a.year ? ` (${a.year})` : ""}</strong> — {a.title}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* Sources utilisées */}
+      {audit_trail && audit_trail.length > 0 && (
+        <>
+          <div style={h2}>Sources techniques consultées</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 16px" }}>
+            {audit_trail.map((t: AuditTrailEntry, i) => (
+              <div key={i} style={small}>{t.source} — {t.result}</div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div style={{ marginTop: 14, paddingTop: 8, borderTop: "1px solid #ddd", fontSize: 9, color: "#999" }}>
+        {results.disclaimer} — Généré le {new Date().toLocaleDateString("fr-FR")}.
+      </div>
     </div>
   );
 }

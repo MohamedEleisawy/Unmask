@@ -75,3 +75,24 @@ body::before {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
+
+/* ---- Rapport PDF imprimable ----
+   Le rapport est masqué à l'écran et n'apparaît qu'à l'impression (Enregistrer en PDF).
+   On masque tout le reste de la page pour obtenir un document propre sur 1-2 pages. */
+.print-report { display: none; }
+
+@media print {
+  body::before { display: none; }            /* retire le grain */
+  body * { visibility: hidden; }
+  .print-report, .print-report * { visibility: visible; }
+  .print-report {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    background: #ffffff;
+    color: #111111;
+  }
+  @page { size: A4; margin: 12mm; }
+}
