@@ -9,18 +9,6 @@ Timeline : reconstruite à partir des années renseignées sur les articles de
 presse (jamais d'année inventée — un article sans année est ignoré).
 """
 
-from typing import Optional
-from urllib.parse import urlparse
-
-
-def _domain(url: str) -> str:
-    try:
-        host = urlparse(url).netloc.lower()
-        return host[4:] if host.startswith("www.") else host
-    except Exception:
-        return ""
-
-
 def _entry(source, consulted, found, verified, result, detail="", evidence_url=None) -> dict:
     return {
         "source": source,
@@ -37,55 +25,14 @@ def _entry(source, consulted, found, verified, result, detail="", evidence_url=N
 # Audit trail
 # ---------------------------------------------------------------------------
 
-def _press_entries(reputation: dict) -> list[dict]:
-    """Une entrée par média cité, avec le nombre d'articles défavorables trouvés."""
-    if not reputation or not reputation.get("available"):
-        return []
-
-    # Compte les articles par domaine.
-    counts: dict[str, int] = {}
-    for a in reputation.get("articles", []):
-        dom = _domain(a.get("url", ""))
-        if dom:
-            counts[dom] = counts.get(dom, 0) + 1
-
-    entries: list[dict] = []
-    seen: set[str] = set()
-    for s in reputation.get("sources", []):
-        url = s.get("url", "")
-        dom = _domain(url)
-        if not dom or dom in seen:
-            continue
-        seen.add(dom)
-        n = counts.get(dom, 0)
-        result = f"{n} article(s) trouvé(s)" if n else "Source consultée"
-        entries.append(_entry(
-            source=s.get("label") or dom,
-            consulted=True, found=n > 0, verified=True,
-            result=result, evidence_url=url,
-        ))
-    return entries
-
-
-def _social_entries(social: dict) -> list[dict]:
-    if not social:
-        return []
-    entries: list[dict] = []
-    for h in social.get("hits", []):
-        if not h.get("found"):
-            continue
-        tag = "officiel" if h.get("official") else "probable"
-        entries.append(_entry(
-            source=h.get("platform"),
-            consulted=True, found=True, verified=True,
-            result=f"@{h.get('username')} — {tag} ({h.get('confidence')}%)",
-            evidence_url=h.get("profile_url"),
-        ))
-    return entries
-
-
 def build_audit_trail(pillars: dict) -> list[dict]:
-    """Journal complet des sources consultées et de leurs résultats."""
+    """Journal des SOURCES TECHNIQUES du moteur (pipeline) et de leurs résultats.
+
+    Volontairement limité aux sources d'infrastructure (Wikipedia, Wikidata,
+    Google Search, Data.gouv, AMF, ACPR) — PAS les articles de presse ni les
+    comptes sociaux, qui sont des PREUVES affichées séparément. On ne mélange
+    jamais « ce qui a été consulté » avec « ce qui a été trouvé sur la personne ».
+    """
     trail: list[dict] = []
 
     res = pillars.get("identity_resolution") or {}
@@ -115,6 +62,15 @@ def build_audit_trail(pillars: dict) -> list[dict]:
             evidence_url=image,
         ))
 
+    social = pillars.get("social_presence") or {}
+    if social:
+        n = social.get("found_count") or 0
+        trail.append(_entry(
+            "Google Search",
+            consulted=True, found=n > 0, verified=True,
+            result=f"{n} profil(s) social/aux détecté(s)" if n else "Aucun profil détecté",
+        ))
+
     legal = pillars.get("legal_identity") or {}
     if legal:
         identity = legal.get("identity") or {}
@@ -140,8 +96,6 @@ def build_audit_trail(pillars: dict) -> list[dict]:
                 evidence_url=reg.get(f"{code}_source"),
             ))
 
-    trail.extend(_social_entries(pillars.get("social_presence") or {}))
-    trail.extend(_press_entries(pillars.get("reputation") or {}))
     return trail
 
 
