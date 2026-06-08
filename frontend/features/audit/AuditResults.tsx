@@ -1,73 +1,41 @@
 "use client";
 
-import type { AuditResponse, PillarData, ScoreBreakdownRow } from "./types";
+import type { AuditResponse, AuditTrailEntry, PillarData, ScoreBreakdownRow, Timeline } from "./types";
 
 type Props = { results: AuditResponse };
 
-const CRITERIA_DETAILS = [
-  {
-    key: "legal_identity",
-    label: "Identité légale vérifiable",
-    getStatus: (d?: PillarData) => ({
-      label: d?.found ? "Identifié" : "Introuvable",
-      color: d?.found ? "#0cdda5" : "#f84b5f",
-      desc: d?.found
-        ? String((d?.identity as Record<string, unknown> | null)?.nom ?? "Entité trouvée")
-        : "Aucune société trouvée pour ce nom.",
-    }),
-  },
-  {
-    key: "compliance",
-    label: "Conformité AMF / ACPR",
-    getStatus: (d?: PillarData) => ({
-      label: d?.is_blacklisted ? "Présent en liste noire" : "Hors liste noire",
-      color: d?.is_blacklisted ? "#f84b5f" : "#0cdda5",
-      desc: d?.is_blacklisted
-        ? String((d.matches as { matched_value: string }[] | undefined)?.[0]?.matched_value ?? "Correspondance trouvée")
-        : "Non référencé dans les bases AMF / ACPR.",
-    }),
-  },
-  {
-    key: "reputation",
-    label: "Réputation publique",
-    getStatus: (d?: PillarData) => {
-      const harmful = (d?.harmful_count as number) ?? 0;
-      const available = !!d && d.available !== false;
-      return {
-        label: !available
-          ? "Analyse indisponible"
-          : harmful > 0
-            ? `${harmful} article${harmful > 1 ? "s" : ""} défavorable${harmful > 1 ? "s" : ""}`
-            : "Aucune atteinte à l'image",
-        color: !available ? "#5a5a5a" : harmful > 0 ? "#f84b5f" : "#0cdda5",
-        desc: !available
-          ? "L'analyse de presse n'a pas pu être effectuée."
-          : (d?.summary as string) || "Aucun article notable détecté.",
-      };
-    },
-  },
-  {
-    key: "social_presence",
-    label: "Transparence partenariats",
-    getStatus: (d?: PillarData) => ({
-      label: d ? "Partenariats visibles" : "Aucune donnée",
-      color: d ? "#0cdda5" : "#5a5a5a",
-      desc: d ? "Les partenariats et mentions AD sont identifiés." : "Données insuffisantes.",
-    }),
-  },
-];
+type SocialHit = {
+  platform: string;
+  profile_url: string | null;
+  found: boolean;
+  username?: string;
+  followers?: string;
+  verified?: boolean;
+  official?: boolean;
+  confidence?: number;
+  verification_status?: string;
+};
 
 export function AuditResults({ results }: Props) {
-  const { global_score, entity, pillars, disclaimer, score_breakdown } = results;
+  const { global_score, entity, pillars, disclaimer, score_breakdown, audit_trail, timeline } = results;
   const entityName = entity.name || entity.url || "Entité auditée";
   const scoreColor = global_score >= 70 ? "#0cdda5" : global_score >= 40 ? "#f5b454" : "#f84b5f";
-  const scoreLabel = global_score >= 70 ? "Plutôt fiable" : global_score >= 40 ? "Profil suspect" : "Peu fiable";
+  const scoreLabel = global_score >= 70 ? "Profil vérifié" : global_score >= 40 ? "Partiellement vérifié" : "Peu d'éléments vérifiables";
 
-  const socialHits = pillars.social_presence as PillarData | undefined;
-  const foundHits = ((socialHits?.hits as { platform: string; profile_url: string | null; found: boolean }[] | undefined) ?? []).filter((h) => h.found);
+  const socialData = pillars.social_presence as PillarData | undefined;
+  const allSocialHits = (socialData?.hits as SocialHit[] | undefined) ?? [];
+  const foundHits = allSocialHits.filter((h) => h.found);
+  const missingHits = allSocialHits.filter((h) => !h.found);
 
-  const identity = (pillars.legal_identity as PillarData | undefined)?.identity as Record<string, unknown> | null | undefined;
+  const legalData = pillars.legal_identity as PillarData | undefined;
+  const identity = legalData?.identity as Record<string, unknown> | null | undefined;
+  const legalFound = !!legalData?.found && !!identity;
   const complianceData = pillars.compliance as PillarData | undefined;
+
+  const resolved = pillars.identity_resolution as PillarData | undefined;
+  const realName = (resolved?.real_name as string | null) || null;
+  const photo = (resolved?.image_url as string | null) || null;
+  const reputationData = pillars.reputation as PillarData | undefined;
 
   return (
     <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-8 pb-16">
@@ -84,16 +52,30 @@ export function AuditResults({ results }: Props) {
             style={{ background: "#141414", borderColor: "#1e1e1e" }}
           >
             <ScoreRing score={global_score} color={scoreColor} />
+            {photo && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={photo}
+                alt={realName || entityName}
+                className="size-16 rounded-full object-cover shrink-0 border"
+                style={{ borderColor: "#2a2a2a" }}
+              />
+            )}
             <div className="flex flex-col gap-2 flex-1 min-w-0">
               <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "#3a3a3a" }}>
-                Résultat de l'audit
+                Résultat de l’audit
               </p>
               <h2
                 className="text-2xl font-bold font-landing-display truncate"
-                style={{ color: "#f84b5f" }}
+                style={{ color: scoreColor }}
               >
                 @{entityName.replace(/^@/, "")}
               </h2>
+              {realName && realName.toLowerCase() !== entityName.toLowerCase() && (
+                <p className="text-xs" style={{ color: "#6a6a6a" }}>
+                  Identité : {realName}
+                </p>
+              )}
               <div className="flex items-center gap-2 mt-1">
                 <span
                   className="inline-block size-2 rounded-full shrink-0"
@@ -109,81 +91,85 @@ export function AuditResults({ results }: Props) {
             </div>
           </div>
 
-          {/* Détails entité */}
-          {identity && (
-            <section className="flex flex-col gap-4">
-              <SectionTitle>Identité légale</SectionTitle>
+          {/* Entreprise associée — purement descriptif, n'influence pas le score */}
+          <section className="flex flex-col gap-4">
+            <SectionTitle>Entreprise associée</SectionTitle>
+            {legalFound && identity ? (
               <div
                 className="rounded-2xl p-5 border grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4"
                 style={{ background: "#141414", borderColor: "#1e1e1e" }}
               >
-                <InfoCell label="Raison sociale" value={String(identity.nom ?? entityName)} highlight />
-                {entity.siren && <InfoCell label="SIREN" value={entity.siren} mono />}
-                {!!identity.forme_juridique && <InfoCell label="Forme juridique" value={String(identity.forme_juridique)} />}
+                <InfoCell label="Nom" value={String(identity.nom ?? entityName)} highlight />
+                {!!(entity.siren || identity.siren) && (
+                  <InfoCell label="SIREN" value={String(entity.siren ?? identity.siren)} mono />
+                )}
+                {!!identity.siret && <InfoCell label="SIRET" value={String(identity.siret)} mono />}
+                {!!identity.forme_juridique && <InfoCell label="Statut juridique" value={String(identity.forme_juridique)} />}
                 {!!identity.date_creation && (
-                  <InfoCell
-                    label="Création"
-                    value={String(identity.date_creation).slice(0, 10)}
-                  />
+                  <InfoCell label="Date de création" value={String(identity.date_creation).slice(0, 10)} />
                 )}
+                {!!identity.activite && <InfoCell label="Activité" value={String(identity.activite)} />}
+                {!!identity.dirigeant && <InfoCell label="Dirigeant" value={String(identity.dirigeant)} />}
                 {entity.sector && <InfoCell label="Secteur" value={entity.sector} />}
-                {entity.url && (
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[10px] uppercase tracking-widest" style={{ color: "#3a3a3a" }}>Site web</span>
-                    <a
-                      href={entity.url.startsWith("http") ? entity.url : `https://${entity.url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm transition-opacity hover:opacity-70 truncate"
-                      style={{ color: "#936bff" }}
-                    >
-                      {entity.url.replace(/^https?:\/\//, "")}
-                    </a>
-                  </div>
-                )}
               </div>
-            </section>
-          )}
+            ) : (
+              <div
+                className="rounded-2xl p-5 border text-xs leading-relaxed"
+                style={{ background: "#141414", borderColor: "#1e1e1e", color: "#5a5a5a" }}
+              >
+                Aucune entreprise identifiée dans les bases publiques consultées.
+                <span className="block mt-1" style={{ color: "#3a3a3a" }}>
+                  Ne pas posséder de structure déclarée ne retire aucun point au score.
+                </span>
+              </div>
+            )}
+          </section>
 
-          {/* Présence en ligne */}
-          {foundHits.length > 0 && (
-            <section className="flex flex-col gap-4">
-              <SectionTitle>Présence en ligne</SectionTitle>
+          {/* Présence en ligne — toujours affichée, jamais masquée par les alertes réputation */}
+          <section className="flex flex-col gap-4">
+            <SectionTitle>Présence en ligne</SectionTitle>
+            {foundHits.length > 0 ? (
               <div className="flex flex-col gap-2">
                 {foundHits.map((hit) => (
-                  <SocialRow key={hit.platform} platform={hit.platform} url={hit.profile_url} />
+                  <SocialRow key={hit.platform} hit={hit} />
                 ))}
               </div>
+            ) : (
+              <div
+                className="rounded-2xl p-5 border text-xs"
+                style={{ background: "#141414", borderColor: "#1e1e1e", color: "#5a5a5a" }}
+              >
+                Aucun compte officiel n’a pu être confirmé sur les plateformes analysées.
+              </div>
+            )}
+            {missingHits.length > 0 && (
+              <p className="text-[11px]" style={{ color: "#3a3a3a" }}>
+                Non détecté : {missingHits.map((m) => platformLabel(m.platform)).join(" · ")}
+              </p>
+            )}
+          </section>
+
+          {/* Réputation publique & preuves */}
+          <section className="flex flex-col gap-4">
+            <SectionTitle>Réputation publique</SectionTitle>
+            <ReputationSection data={reputationData} />
+          </section>
+
+          {/* Chronologie reconstruite à partir des articles datés */}
+          {timeline && timeline.entries.length > 0 && (
+            <section className="flex flex-col gap-4">
+              <SectionTitle>Chronologie</SectionTitle>
+              <TimelineView timeline={timeline} />
             </section>
           )}
 
-          {/* Critères détaillés */}
-          <section className="flex flex-col gap-4">
-            <SectionTitle>Interprétation des critères</SectionTitle>
-            <div
-              className="rounded-2xl overflow-hidden border"
-              style={{ borderColor: "#1e1e1e" }}
-            >
-              {CRITERIA_DETAILS.map((criterion, i) => {
-                const data = pillars[criterion.key] as PillarData | undefined;
-                const status = criterion.getStatus(data);
-                return (
-                  <CriterionRow
-                    key={criterion.key}
-                    label={criterion.label}
-                    statusLabel={status.label}
-                    statusColor={status.color}
-                    description={status.desc}
-                    last={i === CRITERIA_DETAILS.length - 1}
-                  >
-                    {criterion.key === "reputation" && data?.available !== false && (
-                      <ReputationDetails data={data} />
-                    )}
-                  </CriterionRow>
-                );
-              })}
-            </div>
-          </section>
+          {/* Journal des sources consultées */}
+          {audit_trail && audit_trail.length > 0 && (
+            <section className="flex flex-col gap-4">
+              <SectionTitle>Sources analysées ({audit_trail.length})</SectionTitle>
+              <AuditTrailView trail={audit_trail} />
+            </section>
+          )}
 
           {/* Disclaimer */}
           <p className="text-xs leading-relaxed" style={{ color: "#3a3a3a" }}>
@@ -318,6 +304,13 @@ function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
                   {r.available ? `+${r.points} pts` : "—"}
                 </span>
               </div>
+              {r.details && r.details.length > 0 && (
+                <ul className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
+                  {r.details.map((d, i) => (
+                    <li key={i} className="text-[10px]" style={{ color: "#5a5a5a" }}>{d}</li>
+                  ))}
+                </ul>
+              )}
             </li>
           );
         })}
@@ -329,46 +322,88 @@ function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
   );
 }
 
-function SocialRow({ platform, url }: { platform: string; url: string | null }) {
-  const platformLabel = platform.toLowerCase().includes("instagram")
-    ? "Instagram"
-    : platform.toLowerCase().includes("tiktok")
-      ? "TikTok"
-      : platform.toLowerCase().includes("youtube")
-        ? "YouTube"
-        : platform.toLowerCase().includes("x")
-          ? "X (Twitter)"
-          : platform;
+function platformLabel(platform: string): string {
+  const p = platform.toLowerCase();
+  if (p.includes("instagram")) return "Instagram";
+  if (p.includes("tiktok")) return "TikTok";
+  if (p.includes("youtube")) return "YouTube";
+  if (p.includes("x") || p.includes("twitter")) return "X (Twitter)";
+  return platform;
+}
+
+function confidenceColor(confidence: number): string {
+  return confidence >= 80 ? "#0cdda5" : confidence >= 70 ? "#f5b454" : "#6a6a6a";
+}
+
+function SocialRow({ hit }: { hit: SocialHit }) {
+  const label = platformLabel(hit.platform);
+  const username = hit.username?.replace(/^@/, "");
+  const confidence = typeof hit.confidence === "number" ? hit.confidence : null;
+  const verified = hit.verified === true;
+  const official = hit.official === true;
+  const statusLabel = official ? "Officiel" : "Probablement officiel";
+  const statusColor = official ? "#0cdda5" : "#f5b454";
 
   return (
     <div
-      className="flex items-center justify-between h-12 rounded-xl px-4 border transition-colors hover:border-[#2a2a2a]"
+      className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 border transition-colors hover:border-[#2a2a2a]"
       style={{ background: "#141414", borderColor: "#1e1e1e" }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-0">
         <div
           className="size-8 rounded-lg flex items-center justify-center shrink-0"
           style={{ background: "#1e1e1e" }}
         >
-          <SocialIcon platform={platform} />
+          <SocialIcon platform={hit.platform} />
         </div>
-        <span className="text-sm font-medium" style={{ color: "#6a6a6a" }}>
-          {platformLabel}
-        </span>
+        <div className="flex flex-col min-w-0">
+          <span className="text-sm font-medium flex items-center gap-1" style={{ color: "#cfcfcf" }}>
+            {label}
+            {verified && (
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#0cdda5" aria-label="Compte vérifié">
+                <path d="M12 2l2.4 1.8 3 .2.9 2.9 2.4 1.8-1 2.8 1 2.8-2.4 1.8-.9 2.9-3 .2L12 22l-2.4-1.8-3-.2-.9-2.9L3.3 15l1-2.8-1-2.8 2.4-1.8.9-2.9 3-.2z" />
+                <path d="M9.5 12.5l1.8 1.8 3.5-3.8" stroke="#141414" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            )}
+          </span>
+          <span className="text-xs truncate flex items-center gap-2" style={{ color: "#5a5a5a" }}>
+            {username && <span className="truncate">@{username}</span>}
+            {hit.followers && (
+              <span className="shrink-0" style={{ color: "#6a6a6a" }}>· {hit.followers} abonnés</span>
+            )}
+          </span>
+        </div>
       </div>
-      {url && (
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="size-7 rounded-lg flex items-center justify-center shrink-0 transition-all hover:opacity-70 active:scale-95"
-          style={{ background: "#2a2a2a" }}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <span
+          className="text-[10px] font-semibold px-2 py-0.5 rounded-full hidden sm:inline-block"
+          style={{ color: statusColor, background: `${statusColor}14` }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
-            <path d="M7 17L17 7M17 7H7M17 7V17" stroke="#808080" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </a>
-      )}
+          {statusLabel}
+        </span>
+        {confidence !== null && (
+          <span
+            className="text-[11px] font-medium tabular-nums w-9 text-right"
+            style={{ color: confidenceColor(confidence) }}
+            title="Score de confiance"
+          >
+            {confidence}%
+          </span>
+        )}
+        {hit.profile_url && (
+          <a
+            href={hit.profile_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="size-7 rounded-lg flex items-center justify-center shrink-0 transition-all hover:opacity-70 active:scale-95"
+            style={{ background: "#2a2a2a" }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <path d="M7 17L17 7M17 7H7M17 7V17" stroke="#808080" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </a>
+        )}
+      </div>
     </div>
   );
 }
@@ -453,39 +488,128 @@ function ComplianceLine({ label, present }: { label: string; present: boolean })
   );
 }
 
-function CriterionRow({
-  label,
-  statusLabel,
-  statusColor,
-  description,
-  last,
-  children,
-}: {
-  label: string;
-  statusLabel: string;
-  statusColor: string;
-  description: string;
-  last: boolean;
-  children?: React.ReactNode;
-}) {
+function ReputationSection({ data }: { data?: PillarData }) {
+  const available = !!data && data.available !== false;
+  if (!available) {
+    return (
+      <div
+        className="rounded-2xl p-5 border text-xs leading-relaxed"
+        style={{ background: "#141414", borderColor: "#1e1e1e", color: "#5a5a5a" }}
+      >
+        Analyse de presse indisponible (service d’analyse IA non joignable).
+        <span className="block mt-1" style={{ color: "#3a3a3a" }}>
+          L’absence d’analyse n’est pas considérée comme un signal négatif.
+        </span>
+      </div>
+    );
+  }
+  const harmful = (data?.harmful_count as number) ?? 0;
+  const summary = (data?.summary as string) || "Aucun article notable détecté.";
+  const color = harmful > 0 ? "#f84b5f" : "#0cdda5";
+  const statusLabel = harmful > 0
+    ? `${harmful} article${harmful > 1 ? "s" : ""} défavorable${harmful > 1 ? "s" : ""}`
+    : "Aucune mise en cause directe";
+
   return (
-    <div
-      className={`flex flex-col px-5 py-4 ${!last ? "border-b" : ""}`}
-      style={{ background: "#141414", borderColor: "#1e1e1e" }}
-    >
-      <div className="flex items-start justify-between gap-6">
-        <div className="flex flex-col gap-0.5 flex-1 min-w-0">
-          <span className="text-sm font-medium" style={{ color: "#8a8a8a" }}>{label}</span>
-          <span className="text-xs leading-relaxed" style={{ color: "#4a4a4a" }}>{description}</span>
-        </div>
+    <div className="rounded-2xl p-5 border flex flex-col" style={{ background: "#141414", borderColor: "#1e1e1e" }}>
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-xs leading-relaxed flex-1" style={{ color: "#8a8a8a" }}>{summary}</p>
         <span
-          className="text-xs font-semibold shrink-0 mt-0.5 px-2.5 py-1 rounded-full"
-          style={{ color: statusColor, background: `${statusColor}14` }}
+          className="text-xs font-semibold shrink-0 px-2.5 py-1 rounded-full"
+          style={{ color, background: `${color}14` }}
         >
           {statusLabel}
         </span>
       </div>
-      {children}
+      <ReputationDetails data={data} />
+    </div>
+  );
+}
+
+function eventColor(type: string): string {
+  if (type === "condamnation") return "#f84b5f";
+  if (type === "enquete" || type === "plainte") return "#f5b454";
+  return "#8a8a8a";
+}
+
+function TimelineView({ timeline }: { timeline: Timeline }) {
+  return (
+    <div className="rounded-2xl p-5 border flex flex-col gap-4" style={{ background: "#141414", borderColor: "#1e1e1e" }}>
+      <ol className="flex flex-col gap-4">
+        {timeline.entries.map((y) => (
+          <li key={y.year} className="flex gap-4">
+            <span className="text-sm font-bold tabular-nums w-12 shrink-0" style={{ color: "#cfcfcf" }}>{y.year}</span>
+            <ul className="flex flex-col gap-1.5 flex-1 border-l pl-4" style={{ borderColor: "#1e1e1e" }}>
+              {y.events.map((e, i) => (
+                <li key={i} className="flex flex-col">
+                  <span className="text-xs font-medium" style={{ color: eventColor(e.type) }}>{e.label}</span>
+                  {e.url ? (
+                    <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-[11px] transition-opacity hover:opacity-70" style={{ color: "#6a6a6a" }}>
+                      {e.title}
+                    </a>
+                  ) : (
+                    <span className="text-[11px]" style={{ color: "#6a6a6a" }}>{e.title}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+      {!timeline.has_conviction && (
+        <p className="text-[11px] pt-2 border-t" style={{ color: "#5a5a5a", borderColor: "#1e1e1e" }}>
+          Aucune condamnation publique trouvée à ce jour.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function AuditTrailView({ trail }: { trail: AuditTrailEntry[] }) {
+  return (
+    <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "#1e1e1e" }}>
+      {trail.map((t, i) => (
+        <div
+          key={`${t.source}-${i}`}
+          className={`flex items-center justify-between gap-3 px-4 py-3 ${i < trail.length - 1 ? "border-b" : ""}`}
+          style={{ background: "#141414", borderColor: "#1e1e1e" }}
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="shrink-0" title={t.consulted ? "Consultée" : "Non consultée"}>
+              {!t.consulted ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M5 12H19" stroke="#6a6a6a" strokeWidth="2.5" strokeLinecap="round" />
+                </svg>
+              ) : (
+                // Consultée : check vert si info trouvée, check gris si « rien à signaler ».
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="10" fill={t.found ? "#0cdda51f" : "#6a6a6a1f"} />
+                  <path d="M8 12.5L11 15.5L16.5 9" stroke={t.found ? "#0cdda5" : "#8a8a8a"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </span>
+            <span className="text-sm truncate" style={{ color: "#cfcfcf" }}>{t.source}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] truncate max-w-40 sm:max-w-55 text-right" style={{ color: t.found ? "#8a8a8a" : "#5a5a5a" }}>
+              {t.result}
+            </span>
+            {t.evidence_url && (
+              <a
+                href={t.evidence_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="size-6 rounded-md flex items-center justify-center shrink-0 transition-all hover:opacity-70"
+                style={{ background: "#2a2a2a" }}
+              >
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                  <path d="M7 17L17 7M17 7H7M17 7V17" stroke="#808080" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </a>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -14,15 +14,32 @@ export type ScoreBreakdownRow = {
   score: number | null;
   available: boolean;
   reason: string;
+  details?: string[];
   effective_weight: number;
   points: number;
 };
+
+export type AuditTrailEntry = {
+  source: string;
+  consulted: boolean;
+  found: boolean;
+  verified: boolean;
+  result: string;
+  detail?: string;
+  evidence_url?: string | null;
+};
+
+export type TimelineEvent = { label: string; type: string; title: string; url: string };
+export type TimelineYear = { year: number; events: TimelineEvent[] };
+export type Timeline = { entries: TimelineYear[]; has_conviction: boolean };
 
 export type AuditResponse = {
   entity: AuditEntity;
   global_score: number;
   verdict: Verdict;
   score_breakdown?: ScoreBreakdownRow[];
+  audit_trail?: AuditTrailEntry[];
+  timeline?: Timeline;
   pillars: Record<string, PillarData | undefined>;
   disclaimer: string;
 };
