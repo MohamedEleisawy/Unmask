@@ -24,6 +24,7 @@ from typing import Optional
 
 import httpx
 
+
 from app.config import AMF_CACHE_TTL_SECONDS
 from app.services.amf_models import AmfMatch, ComplianceResult
 
@@ -226,6 +227,8 @@ def check_compliance(
         "entity_name_checked": name_query,
         "sector": sector,
         "source": _cache.get("source"),
+        "source_url": _DATAGOUV_URL,
+        "entries_count": len(blacklist),
         "siren_note": (
             "SIREN absent de la liste AMF - a verifier via data.gouv.fr (pilier Identite Legale)"
             if siren else None

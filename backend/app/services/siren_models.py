@@ -4,6 +4,9 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+_NON_TROUVE = "Information non trouvée"
+
+
 @dataclass
 class LegalIdentity:
     """Informations legales d'une entite trouvee sur data.gouv.fr."""
@@ -17,6 +20,9 @@ class LegalIdentity:
     adresse: Optional[str]
     est_entrepreneur_individuel: bool
     source_url: str
+    siret: Optional[str] = None
+    activite: Optional[str] = None
+    dirigeant: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -28,8 +34,22 @@ class LegalIdentity:
             "forme_juridique": self.forme_juridique,
             "adresse": self.adresse,
             "est_entrepreneur_individuel": self.est_entrepreneur_individuel,
+            "siret": self.siret,
+            "activite": self.activite,
+            "dirigeant": self.dirigeant,
             "source": "Annuaire des Entreprises (data.gouv.fr)",
             "source_url": self.source_url,
+            # Bloc "Entreprise" prêt à afficher (jamais inventé : champs manquants
+            # explicitement marqués "Information non trouvée").
+            "company": {
+                "company_name": self.nom or _NON_TROUVE,
+                "siren": self.siren or _NON_TROUVE,
+                "siret": self.siret or _NON_TROUVE,
+                "legal_status": self.forme_juridique or _NON_TROUVE,
+                "creation_date": self.date_creation or _NON_TROUVE,
+                "activity": self.activite or _NON_TROUVE,
+                "manager": self.dirigeant or _NON_TROUVE,
+            },
         }
 
 

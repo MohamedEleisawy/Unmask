@@ -35,9 +35,23 @@ class ComplianceResult:
     warning: Optional[str]
 
     def to_dict(self) -> dict:
+        # Traçabilité par régulateur. La liste ABE Infoservice est consolidée
+        # (AMF + ACPR) : les deux sont vérifiés sur la même source. Le résultat
+        # est "found" si une correspondance existe, sinon "not_found".
+        result = "found" if self.is_blacklisted else "not_found"
+        source = self.checked.get("source_url") if self.checked else None
+        trail = {
+            "amf_checked": True,
+            "amf_result": result,
+            "amf_source": source,
+            "acpr_checked": True,
+            "acpr_result": result,
+            "acpr_source": source,
+        }
         return {
             "is_blacklisted": self.is_blacklisted,
             "matches": [m.to_dict() for m in self.matches],
             "checked": self.checked,
+            "regulators": trail,
             "warning": self.warning,
         }
