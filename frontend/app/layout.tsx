@@ -23,8 +23,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${geistMono.variable} antialiased`}>
-      <body className="min-h-[100dvh] flex flex-col">{children}</body>
+    <html lang="fr" className={`${geistMono.variable} antialiased`} suppressHydrationWarning>
+      <body className="min-h-[100dvh] flex flex-col" suppressHydrationWarning>{children}</body>
     </html>
   );
 }
