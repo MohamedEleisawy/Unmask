@@ -38,12 +38,16 @@ class ResolvedIdentity:
         confidence: str,
         source: str | None = None,
         image_url: str | None = None,
+        wikipedia_url: str | None = None,
     ):
         self.pseudo = pseudo
         self.real_name = real_name
         self.confidence = confidence  # "high" | "medium" | "low" | "unknown"
         self.source = source
         self.image_url = image_url
+        # URL de la fiche Wikipédia si elle existe — distinct de real_name :
+        # une page peut exister sans qu'on extraie un nom civil (titre = pseudo).
+        self.wikipedia_url = wikipedia_url
 
     def to_dict(self) -> dict:
         return {
@@ -52,6 +56,7 @@ class ResolvedIdentity:
             "confidence": self.confidence,
             "source": self.source,
             "image_url": self.image_url,
+            "wikipedia_url": self.wikipedia_url,
         }
 
 
@@ -81,36 +86,61 @@ _WIKI_HEADERS = {
 }
 
 
-async def _wikipedia(name: str, client: httpx.AsyncClient) -> tuple[str | None, str | None]:
-    """
-    Cherche la personnalité sur Wikipédia FR puis EN.
-    Retourne (nom_canonique, url_photo).
-    """
-    slugs = [name.replace(" ", "_")]
-    # Essai sans accents si le premier slug échoue (ex: "Lena Situations" → "Léna Situations")
+def _compact(text: str) -> str:
+    """Minuscules, sans accents ni espaces — pour comparer nom et titre de page."""
     import unicodedata
-    no_accent = "".join(
-        c for c in unicodedata.normalize("NFD", name) if unicodedata.category(c) != "Mn"
-    ).replace(" ", "_")
-    if no_accent != slugs[0]:
-        slugs.append(no_accent)
+    text = "".join(
+        c for c in unicodedata.normalize("NFD", text) if unicodedata.category(c) != "Mn"
+    ).lower()
+    return re.sub(r"[\s\-_.]+", "", text)
 
+
+def _title_matches(title: str, name: str) -> bool:
+    t, n = _compact(title), _compact(name)
+    return bool(t) and (n in t or t in n)
+
+
+async def _wikipedia(name: str, client: httpx.AsyncClient) -> tuple[str | None, str | None, str | None]:
+    """
+    Cherche la personnalité sur Wikipédia FR puis EN via l'API de recherche
+    (robuste aux pseudos mononymes : « Cyprien » → page « Cyprien Iov »).
+    Retourne (titre_canonique, url_photo, url_page).
+    """
     for lang in ("fr", "en"):
-        for slug in slugs:
-            try:
-                resp = await client.get(
-                    f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{slug}",
-                    timeout=_TIMEOUT,
-                    headers=_WIKI_HEADERS,
-                )
-                if resp.status_code == 200:
-                    d = resp.json()
-                    title = d.get("title", "").strip()
-                    image = d.get("thumbnail", {}).get("source")
-                    return (title or None), image
-            except Exception:
-                pass
-    return None, None
+        try:
+            # 1. Meilleure page correspondant au nom (pas de slug exact).
+            sresp = await client.get(
+                f"https://{lang}.wikipedia.org/w/api.php",
+                params={"action": "query", "list": "search", "srsearch": name,
+                        "srlimit": 1, "format": "json"},
+                timeout=_TIMEOUT, headers=_WIKI_HEADERS,
+            )
+            if sresp.status_code != 200:
+                continue
+            hits = sresp.json().get("query", {}).get("search", [])
+            if not hits:
+                continue
+            title = hits[0].get("title", "").strip()
+            if not _title_matches(title, name):
+                continue
+
+            # 2. Résumé de CETTE page → photo + URL canonique.
+            page_url = f"https://{lang}.wikipedia.org/wiki/{title.replace(' ', '_')}"
+            image = None
+            summ = await client.get(
+                f"https://{lang}.wikipedia.org/api/rest_v1/page/summary/{title.replace(' ', '_')}",
+                timeout=_TIMEOUT, headers=_WIKI_HEADERS,
+            )
+            if summ.status_code == 200:
+                sd = summ.json()
+                if sd.get("type") != "disambiguation":
+                    image = sd.get("thumbnail", {}).get("source")
+                    title = sd.get("title", title).strip()
+                    page_url = sd.get("content_urls", {}).get("desktop", {}).get("page") or page_url
+            return (title or None), image, page_url
+        except Exception:
+            pass
+    return None, None, None
 
 
 async def _serper(query: str, client: httpx.AsyncClient) -> dict:
@@ -146,17 +176,18 @@ async def resolve_handle(pseudo: str) -> ResolvedIdentity:
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
 
         # ── 1. Wikipédia (source la plus fiable) ──────────────────────────
-        wiki_name, wiki_image = await _wikipedia(pseudo, client)
-        if wiki_name:
-            # Wikipédia a trouvé une page pour ce nom
-            real = wiki_name if not _looks_like_pseudo(wiki_name, pseudo) else None
+        wiki_name, wiki_image, wiki_url = await _wikipedia(pseudo, client)
+        if wiki_url:
+            # Une fiche Wikipédia existe (même si le titre = pseudo, sans nom civil).
+            real = wiki_name if (wiki_name and not _looks_like_pseudo(wiki_name, pseudo)) else None
             confidence = "high" if real else "medium"
             return ResolvedIdentity(
                 pseudo=pseudo,
                 real_name=real,
                 confidence=confidence,
-                source=f"https://fr.wikipedia.org/wiki/{pseudo.replace(' ', '_')}",
+                source=wiki_url,
                 image_url=wiki_image,
+                wikipedia_url=wiki_url,
             )
 
         # ── 2. Serper Knowledge Graph ──────────────────────────────────────
@@ -178,8 +209,11 @@ async def resolve_handle(pseudo: str) -> ResolvedIdentity:
                 if answer:
                     name = _extract_name(answer) or answer
                     if name and not _looks_like_pseudo(name, pseudo):
-                        _, img = await _wikipedia(name, client)
-                        return ResolvedIdentity(pseudo=pseudo, real_name=name, confidence="high", image_url=img)
+                        _, img, wurl = await _wikipedia(name, client)
+                        return ResolvedIdentity(
+                            pseudo=pseudo, real_name=name, confidence="high",
+                            image_url=img, source=wurl, wikipedia_url=wurl,
+                        )
             except Exception:
                 pass
 
@@ -194,10 +228,10 @@ async def resolve_handle(pseudo: str) -> ResolvedIdentity:
                     if m:
                         name = m.group(1).strip()
                         if not _looks_like_pseudo(name, pseudo):
-                            _, img = await _wikipedia(name, client)
+                            _, img, wurl = await _wikipedia(name, client)
                             return ResolvedIdentity(
                                 pseudo=pseudo, real_name=name, confidence="medium",
-                                source=r.get("link"), image_url=img,
+                                source=wurl or r.get("link"), image_url=img, wikipedia_url=wurl,
                             )
             except Exception:
                 pass

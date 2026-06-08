@@ -12,8 +12,9 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.services.amf_checker import check_compliance
+from app.services.audit_report import build_audit_trail, build_timeline
 from app.services.audit_scoring import compute_breakdown, compute_global_score, verdict_from_score
-from app.services.osint_checker import check_osint_reputation
+from app.services.handle_resolver import resolve_handle
 from app.services.reputation_analyzer import analyze_reputation
 from app.services.siren_checker import check_legal_identity
 from app.services.social_presence_checker import find_social_presence
@@ -49,7 +50,7 @@ def _build_async_tasks(body: FullAuditRequest) -> dict[str, Awaitable]:
         tasks["youtube"] = check_youtube_engagement(body.youtube_url or body.url)
 
     if body.entity_name:
-        tasks["osint"] = check_osint_reputation(body.entity_name)
+        tasks["identity_resolution"] = resolve_handle(body.entity_name)
         tasks["reputation"] = analyze_reputation(body.entity_name)
         tasks["social_presence"] = find_social_presence(body.entity_name)
 
@@ -86,7 +87,9 @@ async def full_audit(body: FullAuditRequest):
     Un service sans input requis ou sans cle API renvoie available=False sans bloquer les autres.
     """
     pillars = await _run_pillars(body)
-    score = compute_global_score(pillars)
+    audit_trail = build_audit_trail(pillars)
+    timeline = build_timeline(pillars)
+    score = compute_global_score(pillars, audit_trail)
 
     return {
         "entity": {
@@ -97,7 +100,9 @@ async def full_audit(body: FullAuditRequest):
         },
         "global_score": score,
         "verdict": verdict_from_score(score),
-        "score_breakdown": compute_breakdown(pillars),
+        "score_breakdown": compute_breakdown(pillars, audit_trail),
+        "audit_trail": audit_trail,
+        "timeline": timeline,
         "pillars": pillars,
         "disclaimer": _DISCLAIMER,
     }

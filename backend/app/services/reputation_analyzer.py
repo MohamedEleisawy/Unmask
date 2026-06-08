@@ -14,6 +14,7 @@ par le scoring).
 """
 
 import json
+from typing import Optional
 
 from app.config import ANTHROPIC_API_KEY
 from app.services.reputation_models import ReputationArticle, ReputationResult
@@ -42,6 +43,17 @@ Pour chaque article RETENU, classe son impact :
 - "favorable": l'entite est la SOURCE qui denonce une arnaque, ou est explicitement disculpee.
 - "neutral"  : mise en cause indirecte mais bien centree sur l'entite.
 
+Classe aussi la NATURE factuelle de l'evenement (gradation juridique) — ne JAMAIS
+surclasser : une accusation n'est pas une condamnation.
+- "accusation"   : reproches/temoignages publics, pas de procedure officielle citee.
+- "plainte"      : depot de plainte mentionne.
+- "enquete"      : enquete/instruction ouverte par une autorite (parquet, AMF...).
+- "condamnation" : decision de justice/sanction d'autorite EXPLICITEMENT rapportee.
+- "autre"        : ne correspond a aucune categorie ci-dessus.
+
+Indique l'annee de l'evenement ("year", entier sur 4 chiffres) si l'article la
+mentionne, sinon null. N'invente jamais d'annee.
+
 BAREME DE NOTATION (reputation_score, 0-100, transparent et justifiable) :
 - 100 : aucune mise en cause directe trouvee.
 - 75-99 : 1 mise en cause mineure non etayee (rumeur, avis isole).
@@ -59,7 +71,7 @@ sans texte autour, avec cette structure exacte :
   "reputation_score": <0-100 selon le bareme>,
   "score_rationale": "<palier applique + justification factuelle en une phrase>",
   "articles": [
-    {"title": "<titre>", "url": "<url de la source>", "impact": "harmful|neutral|favorable", "reason": "<en quoi CETTE entite est directement visee>"}
+    {"title": "<titre>", "url": "<url de la source>", "impact": "harmful|neutral|favorable", "event_type": "accusation|plainte|enquete|condamnation|autre", "year": <annee ou null>, "reason": "<en quoi CETTE entite est directement visee>"}
   ]
 }"""
 
@@ -98,6 +110,25 @@ def _extract_sources(message) -> list[dict]:
     return sources
 
 
+_VALID_EVENTS = {"accusation", "plainte", "enquete", "condamnation", "autre"}
+
+
+def _normalize_event_type(raw) -> str:
+    val = str(raw or "").strip().lower()
+    # tolère "enquête" accentué renvoyé par le modèle
+    val = val.replace("ê", "e").replace("é", "e")
+    return val if val in _VALID_EVENTS else "autre"
+
+
+def _safe_year(raw) -> Optional[int]:
+    """Année plausible (2000-2100) ou None — n'invente rien."""
+    try:
+        year = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return year if 2000 <= year <= 2100 else None
+
+
 def _parse(raw: str) -> tuple[str, int, str, list[ReputationArticle]]:
     """Extrait le JSON meme si le modele ajoute du texte/balises autour."""
     start = raw.find("{")
@@ -110,6 +141,8 @@ def _parse(raw: str) -> tuple[str, int, str, list[ReputationArticle]]:
             url=a.get("url", ""),
             impact=a.get("impact", "neutral"),
             reason=a.get("reason", ""),
+            event_type=_normalize_event_type(a.get("event_type")),
+            year=_safe_year(a.get("year")),
         )
         for a in data.get("articles", [])
     ]
