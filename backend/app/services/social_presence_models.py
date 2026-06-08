@@ -21,9 +21,11 @@ class PlatformHit:
     verified: bool = False      # badge de vérification détecté
     # Score 0-100 : >= 80 confirmé, 70-79 probable, < 70 non affiché
     confidence: int = 0
-    # "confirmed" | "probable" | "unverified" | "not_found"
+    # "official" | "probable" | "unconfirmed" | "not_found"
     verification_status: str = "not_found"
     confidence_reasons: list[str] = field(default_factory=list)
+    # Compte officiel confirmé par une source forte (handle listé sur Wikidata).
+    source_confirmed: bool = False
 
     def to_dict(self) -> dict:
         show = self.found and self.confidence >= DISPLAY_THRESHOLD

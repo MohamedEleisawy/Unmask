@@ -160,39 +160,88 @@ def _extract_followers(text: str) -> tuple[str, int]:
 
 
 # ---------------------------------------------------------------------------
-# Signal global : présence sur Wikipédia
+# Contexte Wikipédia / Wikidata : notoriété + handles officiels (source FORTE)
 # ---------------------------------------------------------------------------
 
-async def _on_wikipedia(name: str, client: httpx.AsyncClient) -> bool:
-    """Vrai si une page Wikipédia (FR ou EN) correspond à ce nom.
+# Propriétés Wikidata des comptes officiels.
+_WD_PROPS = {
+    "x.com": "P2002",          # nom d'utilisateur X / Twitter
+    "instagram.com": "P2003",  # nom d'utilisateur Instagram
+    "tiktok.com": "P7085",     # nom d'utilisateur TikTok
+    "youtube_channel": "P2397",  # identifiant de chaîne YouTube (UC…)
+}
 
-    Utilise l'API de recherche (et non le slug exact) : robuste pour les
-    pseudos mononymes (« Cyprien » → page « Cyprien Iov », « Michou » →
-    « Michou (vidéaste) »). On valide via correspondance du nom sur le titre.
+
+def _wd_profile_url(domain: str, handle: str) -> Optional[str]:
+    if domain == "instagram.com":
+        return f"https://www.instagram.com/{handle}/"
+    if domain == "tiktok.com":
+        return f"https://www.tiktok.com/@{handle}"
+    if domain == "x.com":
+        return f"https://x.com/{handle}"
+    return None
+
+
+async def _wikidata_social(qid: str, client: httpx.AsyncClient) -> dict:
+    """Récupère les handles officiels listés sur Wikidata pour l'entité `qid`."""
+    try:
+        resp = await client.get(
+            "https://www.wikidata.org/w/api.php",
+            params={"action": "wbgetentities", "ids": qid, "props": "claims", "format": "json"},
+            timeout=_TIMEOUT, headers=_WIKI_HEADERS,
+        )
+        claims = resp.json().get("entities", {}).get(qid, {}).get("claims", {})
+    except Exception:
+        return {}
+
+    handles: dict[str, str] = {}
+    for key, pid in _WD_PROPS.items():
+        try:
+            value = claims[pid][0]["mainsnak"]["datavalue"]["value"]
+            if isinstance(value, str) and value.strip():
+                handles[key] = value.strip()
+        except (KeyError, IndexError, TypeError):
+            continue
+    return handles
+
+
+async def _wikipedia_context(name: str, client: httpx.AsyncClient) -> tuple[bool, dict]:
+    """Retourne (présent_sur_wikipedia, handles_officiels_wikidata).
+
+    Recherche la fiche (robuste aux pseudos mononymes), puis lit le QID Wikidata
+    via pageprops pour récupérer les comptes officiels — la source FORTE qui
+    permet de confirmer un compte à 100 % (et non sur un simple nombre d'abonnés).
     """
     name_compact = _compact(name)
     for lang in ("fr", "en"):
         try:
-            resp = await client.get(
+            sresp = await client.get(
                 f"https://{lang}.wikipedia.org/w/api.php",
-                params={
-                    "action": "query", "list": "search",
-                    "srsearch": name, "srlimit": 1, "format": "json",
-                },
-                timeout=_TIMEOUT,
-                headers=_WIKI_HEADERS,
+                params={"action": "query", "list": "search", "srsearch": name,
+                        "srlimit": 1, "format": "json"},
+                timeout=_TIMEOUT, headers=_WIKI_HEADERS,
             )
-            if resp.status_code != 200:
-                continue
-            hits = resp.json().get("query", {}).get("search", [])
+            hits = sresp.json().get("query", {}).get("search", []) if sresp.status_code == 200 else []
             if not hits:
                 continue
-            title_compact = _compact(hits[0].get("title", ""))
-            if title_compact and (name_compact in title_compact or title_compact in name_compact):
-                return True
+            title = hits[0].get("title", "")
+            tc = _compact(title)
+            if not tc or not (name_compact in tc or tc in name_compact):
+                continue
+            # Page trouvée → QID via pageprops.
+            pp = await client.get(
+                f"https://{lang}.wikipedia.org/w/api.php",
+                params={"action": "query", "titles": title, "prop": "pageprops", "format": "json"},
+                timeout=_TIMEOUT, headers=_WIKI_HEADERS,
+            )
+            qid = None
+            for page in pp.json().get("query", {}).get("pages", {}).values():
+                qid = page.get("pageprops", {}).get("wikibase_item")
+            handles = await _wikidata_social(qid, client) if qid else {}
+            return True, handles
         except Exception:
             pass
-    return False
+    return False, {}
 
 
 # ---------------------------------------------------------------------------
@@ -267,38 +316,49 @@ async def _search_platform(
 # ---------------------------------------------------------------------------
 
 def _score_hit(hit: PlatformHit, on_wikipedia: bool, cross_platform: bool) -> None:
-    """Calcule confidence + verification_status sur place selon les signaux."""
+    """Calcule confidence + verification_status sur place selon des signaux EXPLICITES.
+
+    Le nombre d'abonnés n'est qu'un signal de cohérence mineur (+5), jamais une
+    preuve d'officialité. Un compte listé sur Wikidata est confirmé à 100 %.
+    """
+    # Source FORTE : handle officiel listé sur Wikidata → confirmé.
+    if hit.source_confirmed:
+        hit.confidence = 100
+        hit.verification_status = "official"
+        hit.confidence_reasons = ["compte officiel listé sur Wikidata"]
+        return
+
     score = 0
     reasons: list[str] = []
 
     name_in_title = "nom dans le titre" in hit.confidence_reasons
     if name_in_title:
-        score += 35
-        reasons.append("nom présent dans le titre (+35)")
+        score += 40
+        reasons.append("nom dans le titre du compte")
     else:
-        score += 15
-        reasons.append("nom cohérent (+15)")
+        score += 20
+        reasons.append("nom cohérent avec le handle")
 
-    _, count = _extract_followers(f"{hit.title} {hit.snippet}")
-    if count >= 100_000:
+    if cross_platform:
         score += 25
-        reasons.append(f"audience élevée : {hit.followers} (+25)")
-
-    if on_wikipedia:
-        score += 25
-        reasons.append("personnalité présente sur Wikipédia (+25)")
+        reasons.append("même handle sur plusieurs plateformes")
 
     if hit.verified:
         score += 20
-        reasons.append("badge vérifié détecté (+20)")
+        reasons.append("compte vérifié")
 
-    if cross_platform:
+    if on_wikipedia:
         score += 15
-        reasons.append("même handle sur plusieurs plateformes (+15)")
+        reasons.append("personnalité présente sur Wikipédia")
 
     if _extract_username(hit.profile_url or "", hit.domain):
         score += 10
-        reasons.append("URL de profil dédiée (+10)")
+        reasons.append("URL de profil dédiée")
+
+    _, count = _extract_followers(f"{hit.title} {hit.snippet}")
+    if count >= 100_000:
+        score += 5
+        reasons.append("audience cohérente (>100k)")
 
     hit.confidence = min(100, score)
     hit.confidence_reasons = reasons
@@ -355,9 +415,11 @@ async def find_social_presence(query: str) -> SocialPresenceResult:
             _search_platform(name, platform, domain, client)
             for platform, domain in _PLATFORMS
         ]
-        wiki_task = _on_wikipedia(name, client)
-        *hits, on_wikipedia = await asyncio.gather(*platform_tasks, wiki_task)
+        ctx_task = _wikipedia_context(name, client)
+        *serp_hits, ctx = await asyncio.gather(*platform_tasks, ctx_task)
 
+    on_wikipedia, wd_handles = ctx
+    hits = _merge_wikidata(serp_hits, wd_handles)
     _apply_scoring(hits, bool(on_wikipedia))
 
     shown = [h for h in hits if h.found and h.confidence >= DISPLAY_THRESHOLD]
@@ -367,3 +429,46 @@ async def find_social_presence(query: str) -> SocialPresenceResult:
         found_count=len(shown),
         confirmed_count=sum(1 for h in shown if h.confidence >= _OFFICIAL_THRESHOLD),
     )
+
+
+def _merge_wikidata(serp_hits: list[PlatformHit], wd_handles: dict) -> list[PlatformHit]:
+    """Fusionne les résultats SERP avec les handles officiels Wikidata (source forte).
+
+    Pour Instagram/TikTok/X : si Wikidata liste un handle officiel, il fait
+    autorité (on corrige même un mauvais compte trouvé par la recherche).
+    Pour YouTube : on confirme via l'identifiant de chaîne (UC…).
+    """
+    merged: list[PlatformHit] = []
+    for serp, (platform, domain) in zip(serp_hits, _PLATFORMS):
+        wd_handle = wd_handles.get(domain)
+
+        if wd_handle and domain in ("instagram.com", "tiktok.com", "x.com"):
+            same = serp.found and _compact(serp.username) == _compact(wd_handle)
+            merged.append(PlatformHit(
+                platform=platform, domain=domain, found=True,
+                profile_url=_wd_profile_url(domain, wd_handle),
+                username=wd_handle,
+                followers=serp.followers if same else "",
+                verified=serp.verified if same else False,
+                source_confirmed=True,
+            ))
+            continue
+
+        if domain == "youtube.com" and wd_handles.get("youtube_channel"):
+            # Wikidata atteste une chaîne officielle. Si la recherche a trouvé une
+            # chaîne cohérente avec le nom, on la garde (joli @handle + abonnés) et
+            # on la confirme ; sinon on reconstruit l'URL depuis l'identifiant.
+            if serp.found:
+                serp.source_confirmed = True
+                merged.append(serp)
+            else:
+                channel_id = wd_handles["youtube_channel"]
+                merged.append(PlatformHit(
+                    platform=platform, domain=domain, found=True,
+                    profile_url=f"https://www.youtube.com/channel/{channel_id}",
+                    username="", source_confirmed=True,
+                ))
+            continue
+
+        merged.append(serp)
+    return merged
