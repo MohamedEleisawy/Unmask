@@ -76,6 +76,12 @@ app.include_router(social_presence_router)
 app.include_router(full_audit_router)
 
 
+@app.get("/", tags=["Santé"])
+def root():
+    """Racine de l'API — évite le 404 du health-check par défaut (Render ping `/`)."""
+    return {"service": "Unmask API", "status": "ok", "docs": "/docs", "health": "/health"}
+
+
 @app.get("/health", tags=["Santé"])
 def health_check():
     """Vérifie que l'API est opérationnelle et quelles clés sont chargées.
