@@ -23,6 +23,11 @@ from app.api.full_audit import router as full_audit_router
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("unmask")
 
+# httpx loggue les URLs complètes (avec les clés API en query string) en INFO.
+# On le remonte à WARNING pour ne jamais écrire de secret dans les logs (Render…).
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
 app = FastAPI(
     title="Unmask API",
     description="API d'audit de crédibilité pour influenceurs et marques. 6 piliers factuels.",

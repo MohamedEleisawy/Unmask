@@ -2,3 +2,8 @@ fastapi>=0.115
 uvicorn[standard]>=0.30
 pydantic>=2.7
 httpx>=0.27
+# Analyse de réputation / discours (Claude + web_search). Indispensable :
+# son absence faisait échouer silencieusement le pilier réputation en prod.
+anthropic>=0.105
+# Chargement du .env en local (no-op en prod où les variables viennent de l'hébergeur).
+python-dotenv>=1.0
