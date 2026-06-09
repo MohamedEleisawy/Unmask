@@ -14,6 +14,7 @@ par le scoring).
 """
 
 import json
+import logging
 from typing import Optional
 
 from app.config import ANTHROPIC_API_KEY
@@ -197,6 +198,11 @@ async def analyze_reputation(entity_name: str) -> ReputationResult:
         )
 
     except Exception as e:
+        # Log détaillé côté serveur (visible dans les logs Render) pour diagnostiquer :
+        # clé invalide, solde insuffisant, réseau bloqué… sans casser l'audit.
+        logging.getLogger("unmask").warning(
+            "Analyse de réputation échouée (%s) : %s", type(e).__name__, str(e)[:300]
+        )
         return ReputationResult(
             warning=f"Erreur lors de l'analyse de reputation : {type(e).__name__}",
             available=False,

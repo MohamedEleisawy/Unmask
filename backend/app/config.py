@@ -27,3 +27,18 @@ ALLOWED_ORIGINS: list[str] = _csv_env("ALLOWED_ORIGINS", "*")
 
 # TTL du cache liste noire AMF (secondes). 6h par défaut.
 AMF_CACHE_TTL_SECONDS: int = int(os.getenv("AMF_CACHE_TTL_SECONDS", "21600"))
+
+
+def key_status() -> dict[str, bool]:
+    """État de chargement des clés API (booléens — jamais les valeurs).
+
+    Sert au diagnostic en prod (logs de démarrage + /health) : permet de voir
+    immédiatement si une clé manque sur l'hébergeur (Render, etc.).
+    """
+    return {
+        "ANTHROPIC_API_KEY": bool(ANTHROPIC_API_KEY),
+        "SERPER_API_KEY": bool(SERPER_API_KEY),
+        "GOOGLE_CSE_API_KEY": bool(GOOGLE_CSE_API_KEY),
+        "GOOGLE_CSE_ID": bool(GOOGLE_CSE_ID),
+        "YOUTUBE_API_KEY": bool(YOUTUBE_API_KEY),
+    }
