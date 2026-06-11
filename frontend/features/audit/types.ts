@@ -33,6 +33,19 @@ export type TimelineEvent = { label: string; type: string; title: string; url: s
 export type TimelineYear = { year: number; events: TimelineEvent[] };
 export type Timeline = { entries: TimelineYear[]; has_conviction: boolean };
 
+export type ScoreAlert = {
+  type: string;
+  severity: string;
+  message: string;
+  details?: string[];
+};
+
+export type Coverage = {
+  evaluated: number;
+  total: number;
+  confidence: string;
+};
+
 export type AuditResponse = {
   entity: AuditEntity;
   global_score: number;
@@ -42,6 +55,8 @@ export type AuditResponse = {
   timeline?: Timeline;
   pillars: Record<string, PillarData | undefined>;
   disclaimer: string;
+  alerts?: ScoreAlert[];
+  coverage?: Coverage;
 };
 
 export type PillarData = Record<string, unknown>;

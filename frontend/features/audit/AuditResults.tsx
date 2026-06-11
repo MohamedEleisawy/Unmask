@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AuditResponse, AuditTrailEntry, PillarData, ScoreBreakdownRow, Timeline } from "./types";
+import type { AuditResponse, AuditTrailEntry, Coverage, PillarData, ScoreAlert, ScoreBreakdownRow, Timeline } from "./types";
 import { generateAuditPdf } from "./generatePdf";
 
 type Props = { results: AuditResponse };
@@ -30,7 +30,7 @@ export function AuditResults({ results }: Props) {
     }
   };
 
-  const { global_score, entity, pillars, disclaimer, score_breakdown, audit_trail, timeline } = results;
+  const { global_score, entity, pillars, disclaimer, score_breakdown, audit_trail, timeline, alerts, coverage } = results;
   const entityName = entity.name || entity.url || "Entité auditée";
   const scoreColor = global_score >= 70 ? "#0cdda5" : global_score >= 40 ? "#f5b454" : "#f84b5f";
   const scoreLabel = global_score >= 70 ? "Profil vérifié" : global_score >= 40 ? "Partiellement vérifié" : "Peu d'éléments vérifiables";
@@ -75,6 +75,8 @@ export function AuditResults({ results }: Props) {
         {/* Colonne principale */}
         <div className="flex flex-col gap-8">
 
+          <AlertBanner alerts={alerts} />
+
           {/* Header résultat + score */}
           <div
             className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-6 border"
@@ -117,6 +119,7 @@ export function AuditResults({ results }: Props) {
               <p className="text-xs leading-relaxed mt-1 max-w-[38ch]" style={{ color: "var(--au-text-faint)" }}>
                 Avec les informations disponibles, le profil présente un score de crédibilité de {global_score}%.
               </p>
+              <CoverageLine coverage={coverage} />
             </div>
           </div>
 
@@ -251,6 +254,7 @@ export function AuditResults({ results }: Props) {
               </span>
               <span className="text-xl mb-1" style={{ color: "var(--au-text-dim)" }}>/100</span>
             </div>
+            <CoverageLine coverage={coverage} />
             <ScoreBreakdown rows={score_breakdown} />
           </div>
         </div>
@@ -261,6 +265,52 @@ export function AuditResults({ results }: Props) {
 }
 
 /* ---- Sub-components ---- */
+
+function AlertBanner({ alerts }: { alerts?: ScoreAlert[] }) {
+  if (!alerts || alerts.length === 0) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      {alerts.map((a, i) => {
+        const critical = a.severity === "critique";
+        const color = critical ? "#f84b5f" : "#f5b454";
+        return (
+          <div
+            key={i}
+            className="rounded-2xl p-5 border flex items-start gap-3"
+            style={{ background: critical ? "#1f0a0c" : "#1d1505", borderColor: `${color}55` }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-0.5">
+              <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            <div className="flex flex-col gap-1">
+              <p className="text-sm font-semibold" style={{ color }}>{a.message}</p>
+              {a.details && a.details.length > 0 && (
+                <ul className="flex flex-col gap-0.5">
+                  {a.details.map((d, j) => (
+                    <li key={j} className="text-xs" style={{ color: critical ? "#cf8a8f" : "#cdb784" }}>{d}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function CoverageLine({ coverage }: { coverage?: Coverage }) {
+  if (!coverage) return null;
+  const color =
+    coverage.confidence === "élevée" ? "#0cdda5" :
+    coverage.confidence === "moyenne" ? "#f5b454" : "#f84b5f";
+  return (
+    <p className="text-[11px]" style={{ color: "#5a5a5a" }}>
+      Score basé sur {coverage.evaluated}/{coverage.total} sources ·{" "}
+      <span style={{ color }}>confiance {coverage.confidence}</span>
+    </p>
+  );
+}
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
