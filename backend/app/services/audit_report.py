@@ -96,6 +96,22 @@ def build_audit_trail(pillars: dict) -> list[dict]:
                 evidence_url=reg.get(f"{code}_source"),
             ))
 
+    # Analyse de presse (IA) : on trace son statut et, si indisponible, la CAUSE
+    # exacte (ex. « anthropic package missing ») pour le diagnostic.
+    rep = pillars.get("reputation")
+    if rep is not None:
+        available = rep.get("available") is not False
+        n_articles = len(rep.get("articles", []))
+        if available:
+            result = f"{n_articles} article(s) analysé(s)"
+        else:
+            result = f"Indisponible — {rep.get('reason') or rep.get('warning') or 'cause inconnue'}"
+        trail.append(_entry(
+            "Analyse de presse (IA)",
+            consulted=True, found=available and n_articles > 0, verified=available,
+            result=result,
+        ))
+
     return trail
 
 

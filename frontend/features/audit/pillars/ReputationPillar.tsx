@@ -30,11 +30,11 @@ export function ReputationPillar({ data }: { data: PillarData }) {
         <ScoreBar score={score} />
         {harmfulCount > 0 ? (
           <span className="text-[11px] uppercase tracking-wider font-medium text-[var(--color-bad)]">
-            {harmfulCount} article{harmfulCount > 1 ? "s" : ""} nuisant{harmfulCount > 1 ? "s" : ""} à l'image
+            {harmfulCount} article{harmfulCount > 1 ? "s" : ""} nuisant{harmfulCount > 1 ? "s" : ""} à l’image
           </span>
         ) : (
           <span className="text-[11px] uppercase tracking-wider font-medium text-[var(--color-accent)]">
-            Aucune atteinte à l'image
+            Aucune atteinte à l’image
           </span>
         )}
       </div>

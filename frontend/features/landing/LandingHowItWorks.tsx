@@ -2,7 +2,10 @@ export function LandingHowItWorks() {
   return (
     <section id="how" className="w-full max-w-[1200px] mx-auto px-4 md:px-10 pb-24">
 
-      <h2 className="font-landing-display font-medium text-[#dcdcdc] text-[24px] md:text-[36px] mb-10 md:mb-14">
+      <h2
+        className="font-landing-display font-medium text-[24px] md:text-[36px] mb-10 md:mb-14"
+        style={{ color: "var(--au-text)" }}
+      >
         Comment ça fonctionne ?
       </h2>
 
@@ -65,7 +68,7 @@ type StepCardProps = {
 
 function StepCard({ label, bg, textColor, vectorSrc, badgeVectorStyle, cardVectorStyle, description, labelOffsetX }: StepCardProps) {
   return (
-    <div className="flex items-start gap-5 md:relative md:flex-col md:gap-5 md:bg-[#161616] md:rounded-2xl md:border md:border-white/[0.06] md:p-6 md:hover:border-white/[0.12] md:overflow-hidden transition-colors">
+    <div className="flex items-start gap-5 md:relative md:flex-col md:gap-5 md:bg-(--au-surface) md:rounded-2xl md:border md:border-(--au-border) md:p-6 md:hover:border-(--au-border-strong) md:overflow-hidden transition-colors">
 
       {/* Décor en background de la carte — desktop uniquement */}
       <img
@@ -98,7 +101,10 @@ function StepCard({ label, bg, textColor, vectorSrc, badgeVectorStyle, cardVecto
       </div>
 
       {/* Texte */}
-      <p className="font-landing-body text-[#eee]/70 text-[15px] md:text-[16px] leading-relaxed relative">
+      <p
+        className="font-landing-body text-[15px] md:text-[16px] leading-relaxed relative"
+        style={{ color: "var(--au-text-muted)" }}
+      >
         {description}
       </p>
     </div>

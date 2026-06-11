@@ -24,7 +24,10 @@ export function LandingHero() {
           <h1 className="font-landing-display font-bold text-[#f84b5f] text-[32px] md:text-[52px] leading-tight tracking-tight">
             Un feed ne dit<br className="hidden md:block" /> pas tout.
           </h1>
-          <p className="font-landing-body text-[#eee]/70 text-[16px] md:text-[18px] leading-relaxed max-w-[340px] md:max-w-[400px]">
+          <p
+            className="font-landing-body text-[16px] md:text-[18px] leading-relaxed max-w-[340px] md:max-w-[400px]"
+            style={{ color: "var(--au-text-muted)" }}
+          >
             Insérez un nom ou un pseudo pour vérifier l&apos;identité et la crédibilité d&apos;un influenceur, coach ou vendeur en ligne.
           </p>
 
@@ -76,10 +79,13 @@ function HeroVisual() {
       <div className="absolute inset-0 rounded-3xl bg-[#936bff]/10 blur-3xl" />
 
       {/* Carte centrale */}
-      <div className="absolute inset-0 rounded-2xl border border-white/10 bg-[#181818] overflow-hidden flex flex-col justify-between p-6">
+      <div
+        className="absolute inset-0 rounded-2xl border overflow-hidden flex flex-col justify-between p-6"
+        style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
+      >
         <div className="flex flex-col gap-1">
-          <p className="font-landing-body text-[#eee]/40 text-[11px] uppercase tracking-widest">Rapport d&apos;audit</p>
-          <p className="font-landing-body font-bold text-[#eee] text-[20px]">@mentor_finance</p>
+          <p className="font-landing-body text-[11px] uppercase tracking-widest" style={{ color: "var(--au-text-faint)" }}>Rapport d&apos;audit</p>
+          <p className="font-landing-body font-bold text-[20px]" style={{ color: "var(--au-text)" }}>@mentor_finance</p>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -90,7 +96,7 @@ function HeroVisual() {
                   className="w-2 h-2 rounded-full shrink-0"
                   style={{ backgroundColor: b.color }}
                 />
-                <span className="font-landing-body text-[#eee]/70 text-[13px]">{b.label}</span>
+                <span className="font-landing-body text-[13px]" style={{ color: "var(--au-text-muted)" }}>{b.label}</span>
               </div>
               <span
                 className="font-landing-body text-[11px] font-semibold px-2.5 py-0.5 rounded-full"
@@ -102,8 +108,8 @@ function HeroVisual() {
           ))}
         </div>
 
-        <div className="flex items-center justify-between pt-2 border-t border-white/10">
-          <span className="font-landing-body text-[#eee]/30 text-[11px]">Score global</span>
+        <div className="flex items-center justify-between pt-2 border-t" style={{ borderColor: "var(--au-border)" }}>
+          <span className="font-landing-body text-[11px]" style={{ color: "var(--au-text-faint)" }}>Score global</span>
           <span className="font-landing-body font-bold text-[#936bff] text-[22px]">87 / 100</span>
         </div>
       </div>

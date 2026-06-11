@@ -318,8 +318,20 @@ async def _search_platform(
 def _score_hit(hit: PlatformHit, on_wikipedia: bool, cross_platform: bool) -> None:
     """Calcule confidence + verification_status sur place selon des signaux EXPLICITES.
 
-    Le nombre d'abonnés n'est qu'un signal de cohérence mineur (+5), jamais une
-    preuve d'officialité. Un compte listé sur Wikidata est confirmé à 100 %.
+    Barème (défendable, lisible) :
+      100 = confirmé par une SOURCE FORTE : handle officiel listé sur Wikidata
+            (équivaut à « certifié »). C'est le seul chemin vers 100.
+      90-99 = très fortement confirmé : nom dans le titre + multi-plateformes
+              + (vérifié OU notoriété Wikipédia).
+      70-89 = probablement officiel, sans preuve forte (nom cohérent + 1-2 signaux).
+      < 70  = non confirmé → masqué (DISPLAY_THRESHOLD), jamais présenté comme officiel.
+
+    Pondération des signaux (le nombre d'abonnés ne vaut que +5 : c'est un signal
+    de COHÉRENCE, jamais une preuve d'officialité) :
+      nom dans le titre +40 · même handle multi-plateformes +25 · compte vérifié +20
+      · notoriété Wikipédia +15 · URL de profil dédiée +10 · audience >100k +5.
+    Sans Wikidata, le plafond pratique est ~95 (d'où « 95 = confirmé mais
+    élément manquant », p. ex. handle TikTok absent de Wikidata).
     """
     # Source FORTE : handle officiel listé sur Wikidata → confirmé.
     if hit.source_confirmed:

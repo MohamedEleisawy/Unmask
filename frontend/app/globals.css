@@ -44,9 +44,51 @@
 .font-landing-display { font-family: var(--font-landing-display); }
 .font-landing-body    { font-family: var(--font-landing-body); }
 
+/* ---- Thème audit (neutres) ----
+   Seuls les NEUTRES (fonds, bordures, textes) basculent dark/light. Les couleurs
+   de marque (#f84b5f rouge, #0cdda5, #f5b454) restent en dur dans les composants.
+   Défaut = dark. « Auto » suit le système ; data-theme force un choix. */
+:root {
+  --au-bg: #101010;
+  --au-surface: #141414;
+  --au-inset: #1a1a1a;
+  --au-border: #1e1e1e;
+  --au-border-strong: #2a2a2a;
+  --au-text: #eeeeee;
+  --au-text-muted: #8a8a8a;
+  --au-text-faint: #5a5a5a;
+  --au-text-dim: #3a3a3a;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --au-bg: #f8f8f8;
+    --au-surface: #ffffff;
+    --au-inset: #f1f1f1;
+    --au-border: #e6e6e6;
+    --au-border-strong: #d2d2d2;
+    --au-text: #1f1f1f;
+    --au-text-muted: #5a5a5a;
+    --au-text-faint: #8a8a8a;
+    --au-text-dim: #b0b0b0;
+  }
+}
+
+[data-theme="light"] {
+  --au-bg: #f8f8f8;
+  --au-surface: #ffffff;
+  --au-inset: #f1f1f1;
+  --au-border: #e6e6e6;
+  --au-border-strong: #d2d2d2;
+  --au-text: #1f1f1f;
+  --au-text-muted: #5a5a5a;
+  --au-text-faint: #8a8a8a;
+  --au-text-dim: #b0b0b0;
+}
+
 html, body {
-  background: var(--color-bg);
-  color: var(--color-fg);
+  background: var(--au-bg);
+  color: var(--au-text);
   font-family: var(--font-display);
   font-feature-settings: "ss01", "cv11";
 }

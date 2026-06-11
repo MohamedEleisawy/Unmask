@@ -59,8 +59,8 @@ export function AuditResults({ results }: Props) {
           type="button"
           onClick={handleDownloadPdf}
           disabled={pdfBusy}
-          className="flex items-center gap-2 text-sm font-medium rounded-xl px-4 py-2 border transition-colors hover:border-[#3a3a3a] disabled:opacity-50"
-          style={{ background: "#141414", borderColor: "#1e1e1e", color: "#cfcfcf" }}
+          className="flex items-center gap-2 text-sm font-medium rounded-xl px-4 py-2 border transition-colors hover:border-(--au-border-strong) disabled:opacity-50"
+          style={{ background: "var(--au-surface)", borderColor: "var(--au-border)", color: "var(--au-text)" }}
         >
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
             <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14" stroke="#0cdda5" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -78,7 +78,7 @@ export function AuditResults({ results }: Props) {
           {/* Header résultat + score */}
           <div
             className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-6 border"
-            style={{ background: "#141414", borderColor: "#1e1e1e" }}
+            style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
           >
             <ScoreRing score={global_score} color={scoreColor} />
             {photo && (
@@ -87,11 +87,11 @@ export function AuditResults({ results }: Props) {
                 src={photo}
                 alt={realName || entityName}
                 className="size-16 rounded-full object-cover shrink-0 border"
-                style={{ borderColor: "#2a2a2a" }}
+                style={{ borderColor: "var(--au-border-strong)" }}
               />
             )}
             <div className="flex flex-col gap-2 flex-1 min-w-0">
-              <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "#3a3a3a" }}>
+              <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "var(--au-text-dim)" }}>
                 Résultat de l’audit
               </p>
               <h2
@@ -101,7 +101,7 @@ export function AuditResults({ results }: Props) {
                 @{entityName.replace(/^@/, "")}
               </h2>
               {realName && realName.toLowerCase() !== entityName.toLowerCase() && (
-                <p className="text-xs" style={{ color: "#6a6a6a" }}>
+                <p className="text-xs" style={{ color: "var(--au-text-muted)" }}>
                   Identité : {realName}
                 </p>
               )}
@@ -114,7 +114,7 @@ export function AuditResults({ results }: Props) {
                   {scoreLabel}
                 </span>
               </div>
-              <p className="text-xs leading-relaxed mt-1 max-w-[38ch]" style={{ color: "#4a4a4a" }}>
+              <p className="text-xs leading-relaxed mt-1 max-w-[38ch]" style={{ color: "var(--au-text-faint)" }}>
                 Avec les informations disponibles, le profil présente un score de crédibilité de {global_score}%.
               </p>
             </div>
@@ -126,7 +126,7 @@ export function AuditResults({ results }: Props) {
             {legalFound && identity ? (
               <div
                 className="rounded-2xl p-5 border grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4"
-                style={{ background: "#141414", borderColor: "#1e1e1e" }}
+                style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
               >
                 <InfoCell label="Nom" value={String(identity.nom ?? entityName)} highlight />
                 {!!(entity.siren || identity.siren) && (
@@ -135,7 +135,15 @@ export function AuditResults({ results }: Props) {
                 {!!identity.siret && <InfoCell label="SIRET" value={String(identity.siret)} mono />}
                 {!!identity.forme_juridique && <InfoCell label="Statut juridique" value={String(identity.forme_juridique)} />}
                 {!!identity.date_creation && (
-                  <InfoCell label="Date de création" value={String(identity.date_creation).slice(0, 10)} />
+                  <InfoCell label="Date de création" value={formatFrDate(String(identity.date_creation))} />
+                )}
+                {identity.est_actif !== undefined && identity.est_actif !== null && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-widest" style={{ color: "var(--au-text-dim)" }}>État</span>
+                    <span className="text-sm font-medium" style={{ color: identity.est_actif ? "#0cdda5" : "#f84b5f" }}>
+                      {identity.est_actif ? "Active" : "Radiée"}
+                    </span>
+                  </div>
                 )}
                 {!!identity.activite && <InfoCell label="Activité" value={String(identity.activite)} />}
                 {!!identity.dirigeant && <InfoCell label="Dirigeant" value={String(identity.dirigeant)} />}
@@ -146,10 +154,10 @@ export function AuditResults({ results }: Props) {
             ) : (
               <div
                 className="rounded-2xl p-5 border text-xs leading-relaxed"
-                style={{ background: "#141414", borderColor: "#1e1e1e", color: "#5a5a5a" }}
+                style={{ background: "var(--au-surface)", borderColor: "var(--au-border)", color: "var(--au-text-faint)" }}
               >
                 Aucune entreprise identifiée dans les bases publiques consultées.
-                <span className="block mt-1" style={{ color: "#3a3a3a" }}>
+                <span className="block mt-1" style={{ color: "var(--au-text-dim)" }}>
                   Ne pas posséder de structure déclarée ne retire aucun point au score.
                 </span>
               </div>
@@ -168,13 +176,13 @@ export function AuditResults({ results }: Props) {
             ) : (
               <div
                 className="rounded-2xl p-5 border text-xs"
-                style={{ background: "#141414", borderColor: "#1e1e1e", color: "#5a5a5a" }}
+                style={{ background: "var(--au-surface)", borderColor: "var(--au-border)", color: "var(--au-text-faint)" }}
               >
                 Aucun compte officiel n’a pu être confirmé sur les plateformes analysées.
               </div>
             )}
             {missingHits.length > 0 && (
-              <p className="text-[11px]" style={{ color: "#3a3a3a" }}>
+              <p className="text-[11px]" style={{ color: "var(--au-text-dim)" }}>
                 Non détecté : {missingHits.map((m) => platformLabel(m.platform)).join(" · ")}
               </p>
             )}
@@ -199,10 +207,10 @@ export function AuditResults({ results }: Props) {
 
           {/* Sources techniques consultées — repliable, distinct des preuves */}
           {audit_trail && audit_trail.length > 0 && (
-            <details className="group rounded-2xl border" style={{ background: "#141414", borderColor: "#1e1e1e" }}>
+            <details className="group rounded-2xl border" style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}>
               <summary
                 className="flex items-center justify-between gap-2 px-5 py-3 cursor-pointer select-none text-sm font-semibold list-none"
-                style={{ color: "#6a6a6a" }}
+                style={{ color: "var(--au-text-muted)" }}
               >
                 <span>Sources techniques consultées ({audit_trail.length})</span>
                 <svg className="transition-transform group-open:rotate-180" width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -216,7 +224,7 @@ export function AuditResults({ results }: Props) {
           )}
 
           {/* Disclaimer */}
-          <p className="text-xs leading-relaxed" style={{ color: "#3a3a3a" }}>
+          <p className="text-xs leading-relaxed" style={{ color: "var(--au-text-dim)" }}>
             {disclaimer}
           </p>
         </div>
@@ -232,16 +240,16 @@ export function AuditResults({ results }: Props) {
           {/* Résumé score */}
           <div
             className="rounded-2xl p-5 border flex flex-col gap-4"
-            style={{ background: "#141414", borderColor: "#1e1e1e" }}
+            style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
           >
-            <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "#3a3a3a" }}>
+            <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "var(--au-text-dim)" }}>
               Score global
             </p>
             <div className="flex items-end gap-2">
               <span className="text-5xl font-bold tabular-nums" style={{ color: scoreColor }}>
                 {global_score}
               </span>
-              <span className="text-xl mb-1" style={{ color: "#3a3a3a" }}>/100</span>
+              <span className="text-xl mb-1" style={{ color: "var(--au-text-dim)" }}>/100</span>
             </div>
             <ScoreBreakdown rows={score_breakdown} />
           </div>
@@ -256,7 +264,7 @@ export function AuditResults({ results }: Props) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-semibold" style={{ color: "#6a6a6a" }}>
+    <h3 className="text-sm font-semibold" style={{ color: "var(--au-text-muted)" }}>
       {children}
     </h3>
   );
@@ -265,10 +273,10 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
 function InfoCell({ label, value, mono, highlight }: { label: string; value: string; mono?: boolean; highlight?: boolean }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-[10px] uppercase tracking-widest" style={{ color: "#3a3a3a" }}>{label}</span>
+      <span className="text-[10px] uppercase tracking-widest" style={{ color: "var(--au-text-dim)" }}>{label}</span>
       <span
         className={`text-sm truncate ${mono ? "font-mono tabular-nums" : "font-medium"}`}
-        style={{ color: highlight ? "#eee" : "#8a8a8a" }}
+        style={{ color: highlight ? "#eee" : "var(--au-text-muted)" }}
       >
         {value}
       </span>
@@ -315,22 +323,22 @@ function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-[10px] uppercase tracking-widest" style={{ color: "#3a3a3a" }}>
+      <p className="text-[10px] uppercase tracking-widest" style={{ color: "var(--au-text-dim)" }}>
         Barème par critère
       </p>
       <ul className="flex flex-col gap-3">
         {rows.map((r) => {
-          const color = r.available && r.score !== null ? scoreColor(r.score) : "#3a3a3a";
+          const color = r.available && r.score !== null ? scoreColor(r.score) : "var(--au-text-dim)";
           return (
             <li key={r.key} className="flex flex-col gap-1">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-xs truncate" style={{ color: "#8a8a8a" }}>{r.label}</span>
-                <span className="text-[10px] shrink-0" style={{ color: "#4a4a4a" }}>
+                <span className="text-xs truncate" style={{ color: "var(--au-text-muted)" }}>{r.label}</span>
+                <span className="text-[10px] shrink-0" style={{ color: "var(--au-text-faint)" }}>
                   poids {r.effective_weight}%
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "#1e1e1e" }}>
+                <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--au-border)" }}>
                   <div
                     className="h-full rounded-full transition-all"
                     style={{ width: `${r.available && r.score !== null ? r.score : 0}%`, background: color }}
@@ -341,17 +349,17 @@ function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
                 </span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] leading-snug" style={{ color: "#4a4a4a" }}>
+                <span className="text-[10px] leading-snug" style={{ color: "var(--au-text-faint)" }}>
                   {r.reason}
                 </span>
-                <span className="text-[10px] tabular-nums shrink-0" style={{ color: "#5a5a5a" }}>
+                <span className="text-[10px] tabular-nums shrink-0" style={{ color: "var(--au-text-faint)" }}>
                   {r.available ? `+${r.points} pts` : "—"}
                 </span>
               </div>
               {r.details && r.details.length > 0 && (
                 <ul className="flex flex-wrap gap-x-2 gap-y-0.5 mt-0.5">
                   {r.details.map((d, i) => (
-                    <li key={i} className="text-[10px]" style={{ color: "#5a5a5a" }}>{d}</li>
+                    <li key={i} className="text-[10px]" style={{ color: "var(--au-text-faint)" }}>{d}</li>
                   ))}
                 </ul>
               )}
@@ -359,11 +367,18 @@ function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
           );
         })}
       </ul>
-      <p className="text-[10px] leading-relaxed pt-1 border-t" style={{ color: "#3a3a3a", borderColor: "#1e1e1e" }}>
+      <p className="text-[10px] leading-relaxed pt-1 border-t" style={{ color: "var(--au-text-dim)", borderColor: "var(--au-border)" }}>
         Score global = somme des points. Les critères non calculables redistribuent leur poids sur les autres.
       </p>
     </div>
   );
+}
+
+function formatFrDate(raw: string): string {
+  // "2019-03-14" → "14 mars 2019" ; renvoie l'entrée brute si non parsable.
+  const d = new Date(raw.slice(0, 10));
+  if (Number.isNaN(d.getTime())) return raw.slice(0, 10);
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
 function platformLabel(platform: string): string {
@@ -376,7 +391,7 @@ function platformLabel(platform: string): string {
 }
 
 function confidenceColor(confidence: number): string {
-  return confidence >= 80 ? "#0cdda5" : confidence >= 70 ? "#f5b454" : "#6a6a6a";
+  return confidence >= 80 ? "#0cdda5" : confidence >= 70 ? "#f5b454" : "var(--au-text-muted)";
 }
 
 function SocialRow({ hit }: { hit: SocialHit }) {
@@ -392,19 +407,19 @@ function SocialRow({ hit }: { hit: SocialHit }) {
 
   return (
     <div
-      className="flex flex-col gap-1.5 rounded-xl px-4 py-3 border transition-colors hover:border-[#2a2a2a]"
-      style={{ background: "#141414", borderColor: "#1e1e1e" }}
+      className="flex flex-col gap-1.5 rounded-xl px-4 py-3 border transition-colors hover:border-(--au-border-strong)"
+      style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
           <div
             className="size-8 rounded-lg flex items-center justify-center shrink-0"
-            style={{ background: "#1e1e1e" }}
+            style={{ background: "var(--au-border)" }}
           >
             <SocialIcon platform={hit.platform} />
           </div>
           <div className="flex flex-col min-w-0">
-            <span className="text-sm font-medium flex items-center gap-1" style={{ color: "#cfcfcf" }}>
+            <span className="text-sm font-medium flex items-center gap-1" style={{ color: "var(--au-text)" }}>
               {label}
               {verified && (
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="#0cdda5" aria-label="Compte vérifié">
@@ -413,10 +428,10 @@ function SocialRow({ hit }: { hit: SocialHit }) {
                 </svg>
               )}
             </span>
-            <span className="text-xs truncate flex items-center gap-2" style={{ color: "#5a5a5a" }}>
+            <span className="text-xs truncate flex items-center gap-2" style={{ color: "var(--au-text-faint)" }}>
               {username && <span className="truncate">@{username}</span>}
               {hit.followers && (
-                <span className="shrink-0" style={{ color: "#6a6a6a" }}>· {hit.followers} abonnés</span>
+                <span className="shrink-0" style={{ color: "var(--au-text-muted)" }}>· {hit.followers} abonnés</span>
               )}
             </span>
           </div>
@@ -443,7 +458,7 @@ function SocialRow({ hit }: { hit: SocialHit }) {
               target="_blank"
               rel="noopener noreferrer"
               className="size-7 rounded-lg flex items-center justify-center shrink-0 transition-all hover:opacity-70 active:scale-95"
-              style={{ background: "#2a2a2a" }}
+              style={{ background: "var(--au-border-strong)" }}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
                 <path d="M7 17L17 7M17 7H7M17 7V17" stroke="#808080" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -453,7 +468,7 @@ function SocialRow({ hit }: { hit: SocialHit }) {
         </div>
       </div>
       {reasons && (
-        <p className="text-[10px] leading-snug pl-11" style={{ color: "#5a5a5a" }}>
+        <p className="text-[10px] leading-snug pl-11" style={{ color: "var(--au-text-faint)" }}>
           {reasons}
         </p>
       )}
@@ -481,7 +496,7 @@ function SocialIcon({ platform }: { platform: string }) {
       <path d="M10 9.5L15 12L10 14.5V9.5Z" fill="#6a6a6a" />
     </svg>
   );
-  return <span className="text-xs font-bold" style={{ color: "#6a6a6a" }}>{platform[0]?.toUpperCase()}</span>;
+  return <span className="text-xs font-bold" style={{ color: "var(--au-text-muted)" }}>{platform[0]?.toUpperCase()}</span>;
 }
 
 function BlacklistCard({ data }: { data: PillarData | undefined }) {
@@ -497,10 +512,10 @@ function BlacklistCard({ data }: { data: PillarData | undefined }) {
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <p className="text-sm font-semibold" style={{ color: "#eee" }}>
+          <p className="text-sm font-semibold" style={{ color: "var(--au-text)" }}>
             Présence liste noire
           </p>
-          <p className="text-xs" style={{ color: "#5a5a5a" }}>
+          <p className="text-xs" style={{ color: "var(--au-text-faint)" }}>
             Bases AMF et ACPR
           </p>
         </div>
@@ -530,7 +545,7 @@ function BlacklistCard({ data }: { data: PillarData | undefined }) {
 function ComplianceLine({ label, present }: { label: string; present: boolean }) {
   return (
     <div className="flex items-center justify-between">
-      <span className="text-xs" style={{ color: "#4a4a4a" }}>{label}</span>
+      <span className="text-xs" style={{ color: "var(--au-text-faint)" }}>{label}</span>
       <span
         className="text-xs font-medium"
         style={{ color: present ? "#f84b5f" : "#0cdda5" }}
@@ -547,10 +562,10 @@ function ReputationSection({ data }: { data?: PillarData }) {
     return (
       <div
         className="rounded-2xl p-5 border text-xs leading-relaxed"
-        style={{ background: "#141414", borderColor: "#1e1e1e", color: "#5a5a5a" }}
+        style={{ background: "var(--au-surface)", borderColor: "var(--au-border)", color: "var(--au-text-faint)" }}
       >
         Analyse de presse indisponible (service d’analyse IA non joignable).
-        <span className="block mt-1" style={{ color: "#3a3a3a" }}>
+        <span className="block mt-1" style={{ color: "var(--au-text-dim)" }}>
           L’absence d’analyse n’est pas considérée comme un signal négatif.
         </span>
       </div>
@@ -566,9 +581,9 @@ function ReputationSection({ data }: { data?: PillarData }) {
   const color = harm > 0 ? "#f84b5f" : "#0cdda5";
 
   return (
-    <div className="rounded-2xl p-5 border flex flex-col gap-3" style={{ background: "#141414", borderColor: "#1e1e1e" }}>
+    <div className="rounded-2xl p-5 border flex flex-col gap-3" style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}>
       <div className="flex items-start justify-between gap-4">
-        <p className="text-xs leading-relaxed flex-1" style={{ color: "#8a8a8a" }}>{summary}</p>
+        <p className="text-xs leading-relaxed flex-1" style={{ color: "var(--au-text-muted)" }}>{summary}</p>
         <span
           className="text-xs font-semibold shrink-0 px-2.5 py-1 rounded-full"
           style={{ color, background: `${color}14` }}
@@ -584,7 +599,7 @@ function ReputationSection({ data }: { data?: PillarData }) {
         </div>
       )}
       {rationale && (
-        <p className="text-[11px] leading-relaxed px-3 py-2 rounded-lg" style={{ color: "#8a8a8a", background: "#1a1a1a" }}>
+        <p className="text-[11px] leading-relaxed px-3 py-2 rounded-lg" style={{ color: "var(--au-text-muted)", background: "var(--au-inset)" }}>
           <span className="font-semibold" style={{ color: "#aaa" }}>Justification du score : </span>
           {rationale}
         </p>
@@ -612,21 +627,21 @@ function eventColor(type: string): string {
 
 function TimelineView({ timeline }: { timeline: Timeline }) {
   return (
-    <div className="rounded-2xl p-5 border flex flex-col gap-4" style={{ background: "#141414", borderColor: "#1e1e1e" }}>
+    <div className="rounded-2xl p-5 border flex flex-col gap-4" style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}>
       <ol className="flex flex-col gap-4">
         {timeline.entries.map((y) => (
           <li key={y.year} className="flex gap-4">
-            <span className="text-sm font-bold tabular-nums w-12 shrink-0" style={{ color: "#cfcfcf" }}>{y.year}</span>
-            <ul className="flex flex-col gap-1.5 flex-1 border-l pl-4" style={{ borderColor: "#1e1e1e" }}>
+            <span className="text-sm font-bold tabular-nums w-12 shrink-0" style={{ color: "var(--au-text)" }}>{y.year}</span>
+            <ul className="flex flex-col gap-1.5 flex-1 border-l pl-4" style={{ borderColor: "var(--au-border)" }}>
               {y.events.map((e, i) => (
                 <li key={i} className="flex flex-col">
                   <span className="text-xs font-medium" style={{ color: eventColor(e.type) }}>{e.label}</span>
                   {e.url ? (
-                    <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-[11px] transition-opacity hover:opacity-70" style={{ color: "#6a6a6a" }}>
+                    <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-[11px] transition-opacity hover:opacity-70" style={{ color: "var(--au-text-muted)" }}>
                       {e.title}
                     </a>
                   ) : (
-                    <span className="text-[11px]" style={{ color: "#6a6a6a" }}>{e.title}</span>
+                    <span className="text-[11px]" style={{ color: "var(--au-text-muted)" }}>{e.title}</span>
                   )}
                 </li>
               ))}
@@ -635,7 +650,7 @@ function TimelineView({ timeline }: { timeline: Timeline }) {
         ))}
       </ol>
       {!timeline.has_conviction && (
-        <p className="text-[11px] pt-2 border-t" style={{ color: "#5a5a5a", borderColor: "#1e1e1e" }}>
+        <p className="text-[11px] pt-2 border-t" style={{ color: "var(--au-text-faint)", borderColor: "var(--au-border)" }}>
           Aucune condamnation publique trouvée à ce jour.
         </p>
       )}
@@ -645,12 +660,12 @@ function TimelineView({ timeline }: { timeline: Timeline }) {
 
 function AuditTrailView({ trail }: { trail: AuditTrailEntry[] }) {
   return (
-    <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "#1e1e1e" }}>
+    <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "var(--au-border)" }}>
       {trail.map((t, i) => (
         <div
           key={`${t.source}-${i}`}
           className={`flex items-center justify-between gap-3 px-4 py-3 ${i < trail.length - 1 ? "border-b" : ""}`}
-          style={{ background: "#141414", borderColor: "#1e1e1e" }}
+          style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
         >
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="shrink-0" title={t.consulted ? "Consultée" : "Non consultée"}>
@@ -662,14 +677,14 @@ function AuditTrailView({ trail }: { trail: AuditTrailEntry[] }) {
                 // Consultée : check vert si info trouvée, check gris si « rien à signaler ».
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                   <circle cx="12" cy="12" r="10" fill={t.found ? "#0cdda51f" : "#6a6a6a1f"} />
-                  <path d="M8 12.5L11 15.5L16.5 9" stroke={t.found ? "#0cdda5" : "#8a8a8a"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M8 12.5L11 15.5L16.5 9" stroke={t.found ? "#0cdda5" : "var(--au-text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </span>
-            <span className="text-sm truncate" style={{ color: "#cfcfcf" }}>{t.source}</span>
+            <span className="text-sm truncate" style={{ color: "var(--au-text)" }}>{t.source}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] truncate max-w-40 sm:max-w-55 text-right" style={{ color: t.found ? "#8a8a8a" : "#5a5a5a" }}>
+            <span className="text-[11px] truncate max-w-40 sm:max-w-55 text-right" style={{ color: t.found ? "#8a8a8a" : "var(--au-text-faint)" }}>
               {t.result}
             </span>
             {t.evidence_url && (
@@ -678,7 +693,7 @@ function AuditTrailView({ trail }: { trail: AuditTrailEntry[] }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="size-6 rounded-md flex items-center justify-center shrink-0 transition-all hover:opacity-70"
-                style={{ background: "#2a2a2a" }}
+                style={{ background: "var(--au-border-strong)" }}
               >
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
                   <path d="M7 17L17 7M17 7H7M17 7V17" stroke="#808080" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -694,7 +709,7 @@ function AuditTrailView({ trail }: { trail: AuditTrailEntry[] }) {
 
 const IMPACT_META: Record<string, { label: string; color: string }> = {
   harmful: { label: "Défavorable", color: "#f84b5f" },
-  neutral: { label: "Neutre", color: "#6a6a6a" },
+  neutral: { label: "Neutre", color: "var(--au-text-muted)" },
   favorable: { label: "Favorable", color: "#0cdda5" },
 };
 
@@ -740,11 +755,11 @@ function EvidenceSection({ data }: { data?: PillarData }) {
             <div
               key={i}
               className="rounded-xl border p-4 flex flex-col gap-1.5 border-l-2"
-              style={{ background: "#141414", borderColor: "#1e1e1e", borderLeftColor: meta.color }}
+              style={{ background: "var(--au-surface)", borderColor: "var(--au-border)", borderLeftColor: meta.color }}
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[11px] font-medium" style={{ color: "#8a8a8a" }}>{media || "Source"}</span>
-                {!!a.year && <span className="text-[11px]" style={{ color: "#5a5a5a" }}>· {a.year}</span>}
+                <span className="text-[11px] font-medium" style={{ color: "var(--au-text-muted)" }}>{media || "Source"}</span>
+                {!!a.year && <span className="text-[11px]" style={{ color: "var(--au-text-faint)" }}>· {a.year}</span>}
                 <span
                   className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
                   style={{ color: meta.color, background: `${meta.color}14` }}
@@ -766,15 +781,15 @@ function EvidenceSection({ data }: { data?: PillarData }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-sm font-medium leading-snug transition-opacity hover:opacity-70"
-                  style={{ color: "#cfcfcf" }}
+                  style={{ color: "var(--au-text)" }}
                 >
                   {a.title}
                 </a>
               ) : (
-                <span className="text-sm font-medium leading-snug" style={{ color: "#cfcfcf" }}>{a.title}</span>
+                <span className="text-sm font-medium leading-snug" style={{ color: "var(--au-text)" }}>{a.title}</span>
               )}
               {a.reason && (
-                <p className="text-xs leading-relaxed" style={{ color: "#6a6a6a" }}>{a.reason}</p>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--au-text-muted)" }}>{a.reason}</p>
               )}
             </div>
           );

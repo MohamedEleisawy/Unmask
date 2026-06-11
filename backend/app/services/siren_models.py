@@ -61,6 +61,11 @@ class LegalCheckResult:
     identity: Optional[LegalIdentity]
     query_used: str
     warning: Optional[str]
+    # Indicateur comportemental (hors score) : nombre d'entreprises liées au nom
+    # qui sont fermées/radiées/cessées, sur le total examiné. Sert au signal
+    # « multiple_closed_companies ».
+    closed_companies_count: int = 0
+    examined_companies_count: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -68,4 +73,6 @@ class LegalCheckResult:
             "identity": self.identity.to_dict() if self.identity else None,
             "query_used": self.query_used,
             "warning": self.warning,
+            "closed_companies_count": self.closed_companies_count,
+            "examined_companies_count": self.examined_companies_count,
         }

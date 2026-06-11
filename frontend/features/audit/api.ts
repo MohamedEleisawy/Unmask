@@ -1,8 +1,8 @@
 import { API_BASE_URL } from "@/shared/config";
-import type { AuditRequest, AuditResponse } from "./types";
+import type { AuditPreview, AuditRequest, AuditResponse } from "./types";
 
-export async function fetchFullAudit(payload: AuditRequest): Promise<AuditResponse> {
-  const res = await fetch(`${API_BASE_URL}/audit/full`, {
+async function postJson<T>(path: string, payload: AuditRequest): Promise<T> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -14,4 +14,13 @@ export async function fetchFullAudit(payload: AuditRequest): Promise<AuditRespon
   }
 
   return res.json();
+}
+
+/** Pré-vérification rapide d'identité (avant l'audit complet). */
+export function fetchAuditPreview(payload: AuditRequest): Promise<AuditPreview> {
+  return postJson<AuditPreview>("/audit/preview", payload);
+}
+
+export function fetchFullAudit(payload: AuditRequest): Promise<AuditResponse> {
+  return postJson<AuditResponse>("/audit/full", payload);
 }

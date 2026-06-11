@@ -107,7 +107,7 @@ export function AuditForm({ onResults, onReset }: Props) {
             />
           </UnderlineField>
           <p className="text-[11px] text-[var(--color-fg-faint)] leading-relaxed">
-            Besoin d'analyser un texte brut (caption, email, description) ? Utilise l'onglet{" "}
+            Besoin d’analyser un texte brut (caption, email, description) ? Utilise l’onglet{" "}
             <span className="text-[var(--color-fg-subtle)]">Analyse de texte</span> en haut à droite.
           </p>
         </div>

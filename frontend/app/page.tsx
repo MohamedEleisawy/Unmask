@@ -5,7 +5,7 @@ import { LandingFooter } from "@/features/landing/LandingFooter";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-[#101010]">
+    <div className="min-h-dvh flex flex-col" style={{ background: "var(--au-bg)" }}>
       <LandingNavbar />
       <LandingHero />
       <LandingHowItWorks />

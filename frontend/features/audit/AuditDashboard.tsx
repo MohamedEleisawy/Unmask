@@ -95,7 +95,7 @@ export function AuditDashboard({ results }: Props) {
         <div className="mt-6 py-6 border-b border-[var(--color-line)]">
           <div className="flex flex-col gap-1 mb-3">
             <h3 className="text-sm font-medium text-[var(--color-fg)] tracking-tight">
-              Carte d'identité — Présence en ligne
+              Carte d’identité — Présence en ligne
             </h3>
             <p className="text-[11px] text-[var(--color-fg-subtle)]">
               Recherche Google avec opérateur <span className="num">site:</span> · informationnel,

@@ -157,16 +157,32 @@ async def analyze_reputation(entity_name: str) -> ReputationResult:
         return ReputationResult(
             warning="Cle ANTHROPIC_API_KEY non configuree. Analyse de reputation indisponible.",
             available=False,
+            reason="missing_api_key",
         )
 
     if not entity_name or not entity_name.strip():
         return ReputationResult(
             warning="Nom d'entite requis pour l'analyse de reputation.",
             available=False,
+            reason="empty_query",
+        )
+
+    # Import séparé : un package manquant (ModuleNotFoundError) est une cause
+    # d'infra distincte d'une erreur d'API, et doit être signalée explicitement.
+    try:
+        import anthropic
+    except ModuleNotFoundError:
+        logging.getLogger("unmask").error(
+            "Package 'anthropic' absent → analyse de réputation impossible. "
+            "Ajouter 'anthropic' à requirements.txt et redéployer."
+        )
+        return ReputationResult(
+            warning="Package 'anthropic' non installé sur le serveur.",
+            available=False,
+            reason="anthropic package missing",
         )
 
     try:
-        import anthropic
         client = anthropic.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
         message = await client.messages.create(
             model=_MODEL,
@@ -206,4 +222,5 @@ async def analyze_reputation(entity_name: str) -> ReputationResult:
         return ReputationResult(
             warning=f"Erreur lors de l'analyse de reputation : {type(e).__name__}",
             available=False,
+            reason=f"api_error:{type(e).__name__}",
         )

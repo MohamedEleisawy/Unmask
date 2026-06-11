@@ -11,7 +11,7 @@ from typing import Literal, Optional
 # Impact d'un article sur l'image de l'entite.
 Impact = Literal["harmful", "neutral", "favorable"]
 # Nature factuelle de l'evenement rapporte (gradation juridique).
-EventType = Literal["accusation", "plainte", "enquete", "condamnation", "autre"]
+EventType = Literal["accusation", "plainte", "enquete", "condamnation","autre"]
 
 
 @dataclass
@@ -53,6 +53,9 @@ class ReputationResult:
     sources: list[dict] = field(default_factory=list)
     warning: Optional[str] = None
     available: bool = True
+    # Cause machine-lisible de l'indisponibilité (pour l'audit_trail / diagnostic) :
+    # "missing_api_key" | "anthropic package missing" | "empty_query" | "api_error:<Type>"
+    reason: Optional[str] = None
 
     def _event_breakdown(self) -> dict:
         """Compte les articles defavorables par nature factuelle."""
@@ -73,5 +76,6 @@ class ReputationResult:
             "sources": self.sources,
             "warning": self.warning,
             "available": self.available,
+            "reason": self.reason,
             "source": "Claude Haiku 4.5 (web_search)",
         }

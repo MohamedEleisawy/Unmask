@@ -133,8 +133,11 @@ async def check_legal_identity(
             warning="Aucun parametre fourni (entity_name ou siren requis).",
         )
 
+    # Recherche par SIREN : 1 résultat exact. Recherche par nom : on élargit à 10
+    # pour pouvoir détecter d'éventuelles radiations répétées (signal comportemental).
+    per_page = 1 if siren else 10
     async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
-        response = await client.get(_API_BASE, params={"q": query, "per_page": 1})
+        response = await client.get(_API_BASE, params={"q": query, "per_page": per_page})
         response.raise_for_status()
         data = response.json()
 
@@ -154,4 +157,14 @@ async def check_legal_identity(
     if not identity.est_actif:
         warning = f"La societe '{identity.nom}' existe dans le registre mais est fermee (radiation)."
 
-    return LegalCheckResult(found=True, identity=identity, query_used=query, warning=warning)
+    # Comptage des entreprises fermées/radiées parmi les résultats (état != "A").
+    closed = sum(1 for r in results if r.get("etat_administratif") not in ("A", None))
+
+    return LegalCheckResult(
+        found=True,
+        identity=identity,
+        query_used=query,
+        warning=warning,
+        closed_companies_count=closed,
+        examined_companies_count=len(results),
+    )

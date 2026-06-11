@@ -51,5 +51,22 @@ export type AuditRequest = {
   url?: string;
   siren?: string;
   youtube_url?: string;
-  sector: string;
+  sector?: string;
+};
+
+export type PreviewNetwork = {
+  platform: string;
+  username?: string;
+  url?: string | null;
+  official?: boolean;
+  confidence?: number;
+};
+
+export type AuditPreview = {
+  query: string;
+  found: boolean;
+  real_name: string | null;
+  image_url: string | null;
+  wikipedia_url: string | null;
+  networks: PreviewNetwork[];
 };

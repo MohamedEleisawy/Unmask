@@ -14,7 +14,14 @@ from pydantic import BaseModel, Field
 
 from app.services.amf_checker import check_compliance
 from app.services.audit_report import build_audit_trail, build_timeline
-from app.services.audit_scoring import compute_breakdown, compute_global_score, verdict_from_score
+from app.services.audit_scoring import (
+    apply_alert_cap,
+    compute_alerts,
+    compute_breakdown,
+    compute_coverage,
+    compute_global_score,
+    verdict_from_score,
+)
 from app.services.handle_resolver import resolve_handle
 from app.services.reputation_analyzer import analyze_reputation
 from app.services.siren_checker import check_legal_identity
@@ -36,7 +43,9 @@ class FullAuditRequest(BaseModel):
     siren: Optional[str] = Field(default=None, description="SIREN a 9 chiffres.")
     url: Optional[str] = Field(default=None, description="URL du site ou profil reseau social.")
     youtube_url: Optional[str] = Field(default=None, description="URL de la chaine YouTube.")
-    sector: Optional[str] = Field(default="autre", description="Secteur d'activite.")
+    # Pas de secteur par défaut « autre » : si non fourni, il reste None
+    # (un secteur non fiable ne doit pas être affiché — cf. UX).
+    sector: Optional[str] = Field(default=None, description="Secteur d'activite.")
 
 
 def _build_async_tasks(body: FullAuditRequest) -> dict[str, Awaitable]:
@@ -119,6 +128,48 @@ def _log_audit_summary(name: Optional[str], pillars: dict, breakdown: list[dict]
         logger.info("    • %-28s %s", r["label"], state)
 
 
+@router.post("/preview", summary="Pré-vérification d'identité (rapide) avant l'audit complet")
+async def audit_preview(body: FullAuditRequest):
+    """
+    Recherche RAPIDE pour confirmer l'identité avant de lancer l'audit complet :
+    seulement la résolution d'identité (Wikipédia/Wikidata) + la présence sociale.
+    Pas de réputation, pas de réglementaire (donc pas d'appel IA coûteux).
+    Permet à l'utilisateur de valider « est-ce bien cette personne ? » et d'éviter
+    les faux positifs.
+    """
+    name = (body.entity_name or "").strip()
+    if not name:
+        return {"query": body.entity_name, "found": False, "real_name": None,
+                "image_url": None, "wikipedia_url": None, "networks": []}
+
+    resolved, social = await asyncio.gather(
+        resolve_handle(name), find_social_presence(name), return_exceptions=True,
+    )
+    res = _serialize(resolved)
+    soc = _serialize(social)
+
+    networks = [
+        {
+            "platform": h.get("platform"),
+            "username": h.get("username"),
+            "url": h.get("profile_url"),
+            "official": h.get("official"),
+            "confidence": h.get("confidence"),
+        }
+        for h in (soc.get("hits") or []) if h.get("found")
+    ]
+    real_name = res.get("real_name")
+    image_url = res.get("image_url")
+    return {
+        "query": name,
+        "found": bool(real_name or image_url or networks),
+        "real_name": real_name,
+        "image_url": image_url,
+        "wikipedia_url": res.get("wikipedia_url"),
+        "networks": networks,
+    }
+
+
 @router.post("/full", summary="Audit complet - 3 criteres ponderes + presence sociale")
 async def full_audit(body: FullAuditRequest):
     """
@@ -128,8 +179,11 @@ async def full_audit(body: FullAuditRequest):
     pillars = await _run_pillars(body)
     audit_trail = build_audit_trail(pillars)
     timeline = build_timeline(pillars)
-    score = compute_global_score(pillars)
     breakdown = compute_breakdown(pillars)
+    alerts = compute_alerts(pillars)
+    score = apply_alert_cap(compute_global_score(pillars), alerts)
+    coverage = compute_coverage(breakdown)
+    verdict = verdict_from_score(score, alerts)
     _log_audit_summary(body.entity_name, pillars, breakdown, score)
 
     return {
@@ -140,8 +194,10 @@ async def full_audit(body: FullAuditRequest):
             "sector": body.sector,
         },
         "global_score": score,
-        "verdict": verdict_from_score(score),
+        "verdict": verdict,
         "score_breakdown": breakdown,
+        "alerts": alerts,
+        "coverage": coverage,
         "audit_trail": audit_trail,
         "timeline": timeline,
         "pillars": pillars,

@@ -3,8 +3,9 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AuditResults } from "@/features/audit/AuditResults";
-import { fetchFullAudit } from "@/features/audit/api";
-import type { AuditResponse } from "@/features/audit/types";
+import { fetchAuditPreview, fetchFullAudit } from "@/features/audit/api";
+import type { AuditPreview, AuditResponse } from "@/features/audit/types";
+import { ThemeToggle } from "@/shared/ThemeToggle";
 
 export default function AuditPage() {
   return (
@@ -19,10 +20,16 @@ function AuditPageInner() {
   const router = useRouter();
   const query = params.get("q") ?? "";
 
+  // Flux en 2 étapes : 1) pré-vérification d'identité → 2) audit complet après validation.
+  const [phase, setPhase] = useState<"searching" | "confirm" | "auditing" | "done">("searching");
+  const [preview, setPreview] = useState<AuditPreview | null>(null);
   const [results, setResults] = useState<AuditResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
+  const isUrl = query.startsWith("http") || (query.includes(".") && !query.includes(" "));
+  const payload = { entity_name: !isUrl ? query : undefined, url: isUrl ? query : undefined };
+
+  // Étape 1 — recherche rapide d'identité (sans audit complet).
   useEffect(() => {
     if (!query.trim()) {
       router.replace("/");
@@ -30,63 +37,85 @@ function AuditPageInner() {
     }
 
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPhase("searching");
+    setPreview(null);
     setResults(null);
+    setError(null);
 
-    const isUrl = query.startsWith("http") || (query.includes(".") && !query.includes(" "));
-    fetchFullAudit({
-      entity_name: !isUrl ? query : undefined,
-      url: isUrl ? query : undefined,
-      sector: "autre",
-    })
-      .then((data) => { if (!cancelled) setResults(data); })
-      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : "Erreur serveur."); })
-      .finally(() => { if (!cancelled) setLoading(false); });
+    fetchAuditPreview(payload)
+      .then((p) => { if (!cancelled) { setPreview(p); setPhase("confirm"); } })
+      .catch((err) => { if (!cancelled) setError(err instanceof Error ? err.message : "Erreur serveur."); });
 
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, router]);
 
+  // Étape 2 — audit complet, seulement après confirmation de l'utilisateur.
+  const runFullAudit = async () => {
+    setPhase("auditing");
+    setError(null);
+    try {
+      const data = await fetchFullAudit(payload);
+      setResults(data);
+      setPhase("done");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Erreur serveur.");
+    }
+  };
+
   return (
-    <div className="min-h-[100dvh] flex flex-col" style={{ background: "#101010", color: "#eee" }}>
+    <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--au-bg)", color: "var(--au-text)" }}>
       {/* Nav minimale : logo + retour */}
       <nav
         className="sticky top-0 z-30 w-full border-b"
-        style={{ background: "rgba(16,16,16,0.92)", backdropFilter: "blur(12px)", borderColor: "rgba(255,255,255,0.06)" }}
+        style={{ background: "color-mix(in srgb, var(--au-bg) 92%, transparent)", backdropFilter: "blur(12px)", borderColor: "var(--au-border)" }}
       >
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <UnmaskLogo />
-          <button
-            onClick={() => router.push("/")}
-            className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95"
-            style={{ color: "#808080", background: "rgba(255,255,255,0.05)" }}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-              <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            Retour
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => router.push("/")}
+              className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95"
+              style={{ color: "var(--au-text-muted)", background: "var(--au-inset)" }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Retour
+            </button>
+          </div>
         </div>
       </nav>
 
       {/* Contenu */}
       <main className="flex-1 w-full">
-        {loading && <AuditLoading query={query} />}
         {error && <AuditError message={error} onRetry={() => router.replace(`/audit?q=${encodeURIComponent(query)}`)} />}
-        {results && <AuditResults results={results} />}
+        {!error && phase === "searching" && <IdentitySearching query={query} />}
+        {!error && phase === "confirm" && preview && (
+          <IdentityConfirm
+            preview={preview}
+            query={query}
+            onConfirm={runFullAudit}
+            onReject={() => router.replace("/")}
+          />
+        )}
+        {!error && phase === "auditing" && <AuditLoading query={query} />}
+        {!error && phase === "done" && results && <AuditResults results={results} />}
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t" style={{ background: "#181818", borderColor: "rgba(255,255,255,0.06)" }}>
+      <footer className="w-full border-t" style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}>
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 py-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex gap-6">
             {["About", "Help", "Contact"].map((l) => (
-              <a key={l} href="#" className="text-sm transition-opacity hover:opacity-70" style={{ color: "#3a3a3a" }}>
+              <a key={l} href="#" className="text-sm transition-opacity hover:opacity-70" style={{ color: "var(--au-text-dim)" }}>
                 {l}
               </a>
             ))}
           </div>
-          <p className="text-xs" style={{ color: "#3a3a3a" }}>
+          <p className="text-xs" style={{ color: "var(--au-text-dim)" }}>
             © 2026 Unmask. Tous droits réservés.
           </p>
         </div>
@@ -113,7 +142,7 @@ function Bone({ w, h = "h-3", rounded = "rounded" }: { w: string; h?: string; ro
   return (
     <div
       className={`${w} ${h} ${rounded} animate-pulse shrink-0`}
-      style={{ background: "#1e1e1e" }}
+      style={{ background: "var(--au-border)" }}
     />
   );
 }
@@ -129,12 +158,12 @@ function AuditLoading({ query }: { query: string }) {
           {/* Card score — reproduit le header résultat */}
           <div
             className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-6 border"
-            style={{ background: "#141414", borderColor: "#1e1e1e" }}
+            style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
           >
             {/* Ring SVG placeholder */}
             <div
               className="shrink-0 size-[96px] rounded-full animate-pulse"
-              style={{ background: "#1e1e1e" }}
+              style={{ background: "var(--au-border)" }}
             />
             <div className="flex flex-col gap-3 flex-1 min-w-0">
               <Bone w="w-20" h="h-2" />
@@ -143,7 +172,7 @@ function AuditLoading({ query }: { query: string }) {
                 @{query.replace(/^@/, "")}
               </p>
               <div className="flex items-center gap-2">
-                <div className="size-2 rounded-full animate-pulse" style={{ background: "#2a2a2a" }} />
+                <div className="size-2 rounded-full animate-pulse" style={{ background: "var(--au-border-strong)" }} />
                 <Bone w="w-24" h="h-2.5" />
               </div>
               <Bone w="w-48" h="h-2" />
@@ -155,7 +184,7 @@ function AuditLoading({ query }: { query: string }) {
             <Bone w="w-28" h="h-3" />
             <div
               className="rounded-2xl p-5 border grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4"
-              style={{ background: "#141414", borderColor: "#1e1e1e" }}
+              style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
             >
               {Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="flex flex-col gap-2">
@@ -174,13 +203,13 @@ function AuditLoading({ query }: { query: string }) {
                 <div
                   key={i}
                   className="flex items-center justify-between h-12 rounded-xl px-4 border"
-                  style={{ background: "#141414", borderColor: "#1e1e1e" }}
+                  style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="size-8 rounded-lg animate-pulse" style={{ background: "#1e1e1e" }} />
+                    <div className="size-8 rounded-lg animate-pulse" style={{ background: "var(--au-border)" }} />
                     <Bone w={i === 0 ? "w-28" : i === 1 ? "w-24" : "w-20"} h="h-3" />
                   </div>
-                  <div className="size-7 rounded-lg animate-pulse" style={{ background: "#1e1e1e" }} />
+                  <div className="size-7 rounded-lg animate-pulse" style={{ background: "var(--au-border)" }} />
                 </div>
               ))}
             </div>
@@ -189,18 +218,18 @@ function AuditLoading({ query }: { query: string }) {
           {/* Critères détaillés */}
           <div className="flex flex-col gap-4">
             <Bone w="w-52" h="h-3" />
-            <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "#1e1e1e" }}>
+            <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "var(--au-border)" }}>
               {[0, 1, 2, 3].map((i) => (
                 <div
                   key={i}
                   className={`flex items-start justify-between gap-6 px-5 py-4 ${i < 3 ? "border-b" : ""}`}
-                  style={{ background: "#141414", borderColor: "#1e1e1e" }}
+                  style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
                 >
                   <div className="flex flex-col gap-2 flex-1">
                     <Bone w={i % 2 === 0 ? "w-36" : "w-44"} h="h-3" />
                     <Bone w="w-48" h="h-2" />
                   </div>
-                  <div className="h-6 w-20 rounded-full animate-pulse" style={{ background: "#1e1e1e" }} />
+                  <div className="h-6 w-20 rounded-full animate-pulse" style={{ background: "var(--au-border)" }} />
                 </div>
               ))}
             </div>
@@ -215,14 +244,14 @@ function AuditLoading({ query }: { query: string }) {
             <Bone w="w-24" h="h-3" />
             <div
               className="rounded-2xl p-5 border flex flex-col gap-4"
-              style={{ background: "#141414", borderColor: "#1e1e1e" }}
+              style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-2">
                   <Bone w="w-36" h="h-3" />
                   <Bone w="w-24" h="h-2" />
                 </div>
-                <div className="size-8 rounded-full animate-pulse" style={{ background: "#1e1e1e" }} />
+                <div className="size-8 rounded-full animate-pulse" style={{ background: "var(--au-border)" }} />
               </div>
               <div className="flex flex-col gap-3">
                 {["AMF", "ACPR"].map((l) => (
@@ -238,18 +267,18 @@ function AuditLoading({ query }: { query: string }) {
           {/* Score global */}
           <div
             className="rounded-2xl p-5 border flex flex-col gap-4"
-            style={{ background: "#141414", borderColor: "#1e1e1e" }}
+            style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
           >
             <Bone w="w-24" h="h-2" />
             <div className="flex items-end gap-2">
-              <div className="w-16 h-12 rounded-lg animate-pulse" style={{ background: "#1e1e1e" }} />
+              <div className="w-16 h-12 rounded-lg animate-pulse" style={{ background: "var(--au-border)" }} />
               <Bone w="w-10" h="h-5" />
             </div>
             <div className="flex flex-col gap-2.5">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="flex items-center justify-between gap-3">
                   <Bone w={i % 2 === 0 ? "w-28" : "w-32"} h="h-2" />
-                  <div className="h-5 w-10 rounded-full animate-pulse" style={{ background: "#1e1e1e" }} />
+                  <div className="h-5 w-10 rounded-full animate-pulse" style={{ background: "var(--au-border)" }} />
                 </div>
               ))}
             </div>
@@ -268,10 +297,113 @@ function AuditError({ message, onRetry }: { message: string; onRetry: () => void
       <button
         onClick={onRetry}
         className="self-start text-sm px-4 py-2 rounded-lg"
-        style={{ background: "#1e1e1e", color: "#eee" }}
+        style={{ background: "var(--au-border)", color: "var(--au-text)" }}
       >
         Réessayer
       </button>
+    </div>
+  );
+}
+
+function IdentitySearching({ query }: { query: string }) {
+  return (
+    <div className="max-w-[640px] mx-auto px-4 md:px-8 pt-20 flex flex-col items-center gap-4 text-center">
+      <div
+        className="size-10 rounded-full border-2 animate-spin"
+        style={{ borderColor: "var(--au-border-strong)", borderTopColor: "#f84b5f" }}
+      />
+      <p className="text-sm" style={{ color: "var(--au-text-muted)" }}>
+        Recherche de l’identité de <span style={{ color: "var(--au-text)" }}>@{query.replace(/^@/, "")}</span>…
+      </p>
+    </div>
+  );
+}
+
+function IdentityConfirm({
+  preview,
+  query,
+  onConfirm,
+  onReject,
+}: {
+  preview: AuditPreview;
+  query: string;
+  onConfirm: () => void;
+  onReject: () => void;
+}) {
+  const name = query.replace(/^@/, "");
+  // Retire un éventuel suffixe d'homonymie Wikipédia (« Michou (vidéaste) » → « Michou »).
+  const realName = preview.real_name?.replace(/\s*\(.*?\)\s*$/, "").trim() || null;
+  const showRealName = realName && realName.toLowerCase() !== name.toLowerCase();
+
+  return (
+    <div className="max-w-[640px] mx-auto px-4 md:px-8 pt-12 pb-16">
+      <div
+        className="rounded-2xl p-6 flex flex-col gap-5 border"
+        style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
+      >
+        <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "var(--au-text-dim)" }}>
+          Vérification d’identité
+        </p>
+
+        <div className="flex items-center gap-4">
+          {preview.image_url && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={preview.image_url}
+              alt={name}
+              className="size-16 rounded-full object-cover shrink-0 border"
+              style={{ borderColor: "var(--au-border-strong)" }}
+            />
+          )}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-xl font-bold truncate" style={{ color: "var(--au-text)" }}>@{name}</span>
+            {showRealName && (
+              <span className="text-sm" style={{ color: "var(--au-text-muted)" }}>Nom réel : {realName}</span>
+            )}
+          </div>
+        </div>
+
+        {preview.networks.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            <span className="text-xs" style={{ color: "var(--au-text-faint)" }}>Réseaux trouvés :</span>
+            <div className="flex flex-wrap gap-2">
+              {preview.networks.map((n) => (
+                <span
+                  key={n.platform}
+                  className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1"
+                  style={{ color: "var(--au-text)", background: "var(--au-border)" }}
+                >
+                  {n.platform}
+                  {n.official && <span style={{ color: "#0cdda5" }}>✓</span>}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm" style={{ color: "var(--au-text-muted)" }}>
+            Peu d’éléments publics trouvés pour ce nom.
+          </p>
+        )}
+
+        <p className="text-sm font-medium" style={{ color: "var(--au-text)" }}>Est-ce bien cette personne ?</p>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onConfirm}
+            className="flex-1 text-sm font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-95"
+            style={{ background: "#0cdda5", color: "#06140f" }}
+          >
+            Oui, lancer l’audit
+          </button>
+          <button
+            onClick={onReject}
+            className="text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
+            style={{ background: "var(--au-border)", color: "var(--au-text)" }}
+          >
+            Non
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
