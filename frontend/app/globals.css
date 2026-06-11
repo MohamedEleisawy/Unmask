@@ -39,15 +39,37 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
   --font-landing-display: "Quatty", ui-sans-serif, system-ui, sans-serif;
   --font-landing-body: "Satoshi", ui-sans-serif, system-ui, sans-serif;
+
+  /* Motion — décélération exponentielle, sans rebond (cf. DESIGN.md).
+     Expose les utilitaires Tailwind ease-out / duration-{fast,state,reveal}. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-duration-fast: 120ms;     /* feedback instantané */
+  --animate-duration-state: 220ms;    /* changements d'état (produit : 150-250ms) */
+  --animate-duration-reveal: 480ms;   /* remplissage de score, entrées */
+
+  /* Échelle z-index sémantique — empile du plus bas au plus haut.
+     Jamais de valeur magique (999, 9999) ; ajouter un palier ici si besoin. */
+  --z-base: 0;
+  --z-sticky: 30;       /* nav collante */
+  --z-overlay: 40;      /* futurs voiles de modale */
+  --z-grain: 50;        /* film de grain ambiant, au-dessus de tout */
 }
 
 .font-landing-display { font-family: var(--font-landing-display); }
 .font-landing-body    { font-family: var(--font-landing-body); }
 
-/* ---- Thème audit (neutres) ----
-   Seuls les NEUTRES (fonds, bordures, textes) basculent dark/light. Les couleurs
-   de marque (#f84b5f rouge, #0cdda5, #f5b454) restent en dur dans les composants.
-   Défaut = dark. « Auto » suit le système ; data-theme force un choix. */
+/* ---- Thème audit (neutres + verdict) ----
+   Les NEUTRES (fonds, bordures, textes) ET les couleurs de VERDICT basculent
+   dark/light pour tenir le contraste AA dans les deux thèmes. Le violet de
+   MARQUE (#936bff) reste en dur — il sert d'accent, pas d'état.
+   Défaut = dark. « Auto » suit le système ; data-theme force un choix.
+
+   Échelle de texte (toutes ≥ 4.5:1 sur surface, sauf --au-text-line) :
+     text        principal
+     text-muted  secondaire (sous-titres)
+     text-faint  small print / preuves — LISIBLE (porte du contenu)
+     text-dim    labels discrets — LISIBLE (placeholders, eyebrows)
+     text-line   décor non-textuel UNIQUEMENT (jamais de texte dessus) */
 :root {
   --au-bg: #101010;
   --au-surface: #141414;
@@ -56,8 +78,17 @@
   --au-border-strong: #2a2a2a;
   --au-text: #eeeeee;
   --au-text-muted: #8a8a8a;
-  --au-text-faint: #5a5a5a;
-  --au-text-dim: #3a3a3a;
+  --au-text-faint: #8a8a8a;
+  --au-text-dim: #808080;
+  --au-text-line: #3a3a3a;
+
+  /* Verdict — vif sur fond sombre. --*-on = texte/icône posé SUR la couleur. */
+  --verdict-good: #0cdda5;
+  --verdict-good-on: #06140f;
+  --verdict-warn: #f5b454;
+  --verdict-warn-on: #1d1505;
+  --verdict-bad: #f84b5f;
+  --verdict-bad-on: #1f0a0c;
 }
 
 @media (prefers-color-scheme: light) {
@@ -69,8 +100,17 @@
     --au-border-strong: #d2d2d2;
     --au-text: #1f1f1f;
     --au-text-muted: #5a5a5a;
-    --au-text-faint: #8a8a8a;
-    --au-text-dim: #b0b0b0;
+    --au-text-faint: #6a6a6a;
+    --au-text-dim: #767676;
+    --au-text-line: #b0b0b0;
+
+    /* Verdict — assombri pour rester ≥ 4.5:1 sur surface claire. */
+    --verdict-good: #0a805f;
+    --verdict-good-on: #ffffff;
+    --verdict-warn: #9c620d;
+    --verdict-warn-on: #ffffff;
+    --verdict-bad: #d6293f;
+    --verdict-bad-on: #ffffff;
   }
 }
 
@@ -82,8 +122,16 @@
   --au-border-strong: #d2d2d2;
   --au-text: #1f1f1f;
   --au-text-muted: #5a5a5a;
-  --au-text-faint: #8a8a8a;
-  --au-text-dim: #b0b0b0;
+  --au-text-faint: #6a6a6a;
+  --au-text-dim: #767676;
+  --au-text-line: #b0b0b0;
+
+  --verdict-good: #0a805f;
+  --verdict-good-on: #ffffff;
+  --verdict-warn: #9c620d;
+  --verdict-warn-on: #ffffff;
+  --verdict-bad: #d6293f;
+  --verdict-bad-on: #ffffff;
 }
 
 html, body {
@@ -98,11 +146,25 @@ body::before {
   content: "";
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: var(--z-grain);
   pointer-events: none;
   opacity: 0.018;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+}
+
+/* Focus clavier cohérent — anneau violet de marque, jamais supprimé sans
+   remplacement. Ne s'affiche qu'au clavier (:focus-visible), pas à la souris.
+   N'applique l'anneau qu'aux contrôles eux-mêmes ; les inputs « nus » dont le
+   focus est porté par un conteneur (focus-within) gardent leur outline-none. */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible,
+summary:focus-visible,
+select:focus-visible {
+  outline: 2px solid #936bff; /* violet de marque */
+  outline-offset: 2px;
 }
 
 /* Refine selection contrast */
@@ -116,4 +178,45 @@ body::before {
   font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
+}
+
+/* ---- Cible tactile (WCAG 2.5.5/2.5.8) ----
+   Étend la zone tappable à ≥ 44px SANS grossir l'icône, et seulement sur
+   pointeur grossier (tactile). Au pointeur fin (souris) la densité reste intacte.
+   Le parent doit être position:relative ou un flex/grid item (l'overlay est absolu). */
+@media (pointer: coarse) {
+  .tap-target {
+    position: relative;
+  }
+  .tap-target::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+    /* zone d'interaction seulement — invisible, non peinte */
+  }
+}
+
+/* ---- Mouvement réduit (WCAG 2.3.3) ----
+   Exigé par PRODUCT.md. Tout le contenu reste visible par défaut (aucune
+   révélation gated derrière une transition), donc on peut neutraliser sans
+   rien cacher : les boucles décoratives (spin/pulse/bounce) s'arrêtent et les
+   transitions deviennent quasi-instantanées (crossfade implicite). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* Les spinners infinis perdraient leur sens en s'arrêtant à une frame
+     arbitraire : on les fige à pleine opacité, lisibles comme un état. */
+  .animate-spin {
+    animation: none !important;
+  }
 }

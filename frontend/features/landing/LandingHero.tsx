@@ -32,7 +32,7 @@ export function LandingHero() {
           </p>
 
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-            <div className="relative w-[310px] md:w-[340px] h-[49px]">
+            <div className="relative w-[310px] md:w-[340px] h-[49px] rounded-[32px] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#936bff]">
               <div className="absolute inset-0 bg-[#eee] rounded-[32px]" />
               <div className="absolute inset-0 flex items-center gap-2 pl-[18px]">
                 <div className="relative shrink-0 size-4">

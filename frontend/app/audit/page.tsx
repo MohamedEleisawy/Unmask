@@ -68,8 +68,8 @@ function AuditPageInner() {
     <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--au-bg)", color: "var(--au-text)" }}>
       {/* Nav minimale : logo + retour */}
       <nav
-        className="sticky top-0 z-30 w-full border-b"
-        style={{ background: "color-mix(in srgb, var(--au-bg) 92%, transparent)", backdropFilter: "blur(12px)", borderColor: "var(--au-border)" }}
+        className="sticky top-0 w-full border-b"
+        style={{ zIndex: "var(--z-sticky)", background: "color-mix(in srgb, var(--au-bg) 92%, transparent)", backdropFilter: "blur(12px)", borderColor: "var(--au-border)" }}
       >
         <div className="max-w-[1200px] mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <UnmaskLogo />
@@ -77,10 +77,11 @@ function AuditPageInner() {
             <ThemeToggle />
             <button
               onClick={() => router.push("/")}
-              className="flex items-center gap-2 text-sm font-medium px-3 py-1.5 rounded-lg transition-all active:scale-95"
+              aria-label="Retour à l'accueil"
+              className="tap-target flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-lg transition-all active:scale-95"
               style={{ color: "var(--au-text-muted)", background: "var(--au-inset)" }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M19 12H5M5 12L12 19M5 12L12 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
               Retour
@@ -149,8 +150,11 @@ function Bone({ w, h = "h-3", rounded = "rounded" }: { w: string; h?: string; ro
 
 function AuditLoading({ query }: { query: string }) {
   return (
-    <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-8 pb-16">
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-12 items-start">
+    <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-8 pb-16" role="status" aria-busy="true">
+      <span className="sr-only" aria-live="polite">
+        Audit de @{query.replace(/^@/, "")} en cours…
+      </span>
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-12 items-start" aria-hidden="true">
 
         {/* Colonne principale */}
         <div className="flex flex-col gap-8">
@@ -292,11 +296,11 @@ function AuditLoading({ query }: { query: string }) {
 
 function AuditError({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
-    <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-16 flex flex-col gap-4">
-      <p className="text-sm" style={{ color: "#f84b5f" }}>{message}</p>
+    <div role="alert" className="max-w-[1200px] mx-auto px-4 md:px-8 pt-16 flex flex-col gap-4">
+      <p className="text-sm" style={{ color: "var(--verdict-bad)", wordBreak: "break-word" }}>{message}</p>
       <button
         onClick={onRetry}
-        className="self-start text-sm px-4 py-2 rounded-lg"
+        className="self-start text-sm px-4 py-2 rounded-lg transition-colors active:scale-95"
         style={{ background: "var(--au-border)", color: "var(--au-text)" }}
       >
         Réessayer
@@ -307,13 +311,19 @@ function AuditError({ message, onRetry }: { message: string; onRetry: () => void
 
 function IdentitySearching({ query }: { query: string }) {
   return (
-    <div className="max-w-[640px] mx-auto px-4 md:px-8 pt-20 flex flex-col items-center gap-4 text-center">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="max-w-[640px] mx-auto px-4 md:px-8 pt-20 flex flex-col items-center gap-4 text-center"
+    >
       <div
         className="size-10 rounded-full border-2 animate-spin"
         style={{ borderColor: "var(--au-border-strong)", borderTopColor: "#f84b5f" }}
+        aria-hidden="true"
       />
       <p className="text-sm" style={{ color: "var(--au-text-muted)" }}>
-        Recherche de l’identité de <span style={{ color: "var(--au-text)" }}>@{query.replace(/^@/, "")}</span>…
+        Recherche de l’identité de <span style={{ color: "var(--au-text)", wordBreak: "break-word" }}>@{query.replace(/^@/, "")}</span>…
       </p>
     </div>
   );
@@ -350,9 +360,15 @@ function IdentityConfirm({
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={preview.image_url}
-              alt={name}
+              alt={`Photo de ${realName || name}`}
+              width={64}
+              height={64}
+              loading="lazy"
+              decoding="async"
+              referrerPolicy="no-referrer"
               className="size-16 rounded-full object-cover shrink-0 border"
               style={{ borderColor: "var(--au-border-strong)" }}
+              onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
           )}
           <div className="flex flex-col gap-0.5 min-w-0">

@@ -90,10 +90,11 @@ export function AuditSearchForm({ onResults }: Props) {
                 <button
                   type="button"
                   onClick={() => setQuery("")}
-                  className="shrink-0 transition-opacity hover:opacity-60"
+                  aria-label="Effacer la recherche"
+                  className="tap-target shrink-0 flex items-center justify-center size-6 transition-opacity hover:opacity-60"
                   style={{ color: "var(--au-text-faint)" }}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </button>
@@ -133,7 +134,7 @@ export function AuditSearchForm({ onResults }: Props) {
             </div>
 
             {error && (
-              <p className="text-xs px-1" style={{ color: "#f84b5f" }}>{error}</p>
+              <p className="text-xs px-1" style={{ color: "var(--verdict-bad)" }}>{error}</p>
             )}
 
             <button

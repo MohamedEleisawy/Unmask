@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { AuditResponse, AuditTrailEntry, Coverage, PillarData, ScoreAlert, ScoreBreakdownRow, Timeline } from "./types";
 import { generateAuditPdf } from "./generatePdf";
+import { VERDICT, scoreColor, verdictWash } from "@/shared/ui/verdict";
 
 type Props = { results: AuditResponse };
 
@@ -32,7 +33,7 @@ export function AuditResults({ results }: Props) {
 
   const { global_score, entity, pillars, disclaimer, score_breakdown, audit_trail, timeline, alerts, coverage } = results;
   const entityName = entity.name || entity.url || "Entité auditée";
-  const scoreColor = global_score >= 70 ? "#0cdda5" : global_score >= 40 ? "#f5b454" : "#f84b5f";
+  const verdictColor = scoreColor(global_score);
   const scoreLabel = global_score >= 70 ? "Profil vérifié" : global_score >= 40 ? "Partiellement vérifié" : "Peu d'éléments vérifiables";
 
   const socialData = pillars.social_presence as PillarData | undefined;
@@ -82,26 +83,32 @@ export function AuditResults({ results }: Props) {
             className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-6 border"
             style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
           >
-            <ScoreRing score={global_score} color={scoreColor} />
+            <ScoreRing score={global_score} color={verdictColor} />
             {photo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={photo}
-                alt={realName || entityName}
+                alt={`Photo de ${realName || entityName}`}
+                width={64}
+                height={64}
+                loading="lazy"
+                decoding="async"
+                referrerPolicy="no-referrer"
                 className="size-16 rounded-full object-cover shrink-0 border"
                 style={{ borderColor: "var(--au-border-strong)" }}
+                onError={(e) => { e.currentTarget.style.display = "none"; }}
               />
             )}
             <div className="flex flex-col gap-2 flex-1 min-w-0">
-              <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "var(--au-text-dim)" }}>
+              <p className="text-[0.625rem] uppercase tracking-[0.12em] font-medium" style={{ color: "var(--au-text-dim)" }}>
                 Résultat de l’audit
               </p>
-              <h2
-                className="text-2xl font-bold font-landing-display truncate"
-                style={{ color: scoreColor }}
+              <h1
+                className="text-2xl font-bold tracking-tight truncate"
+                style={{ color: verdictColor }}
               >
                 @{entityName.replace(/^@/, "")}
-              </h2>
+              </h1>
               {realName && realName.toLowerCase() !== entityName.toLowerCase() && (
                 <p className="text-xs" style={{ color: "var(--au-text-muted)" }}>
                   Identité : {realName}
@@ -110,9 +117,9 @@ export function AuditResults({ results }: Props) {
               <div className="flex items-center gap-2 mt-1">
                 <span
                   className="inline-block size-2 rounded-full shrink-0"
-                  style={{ background: scoreColor, boxShadow: `0 0 0 3px ${scoreColor}22` }}
+                  style={{ background: verdictColor, boxShadow: `0 0 0 3px ${verdictWash(verdictColor)}` }}
                 />
-                <span className="text-sm font-medium" style={{ color: scoreColor }}>
+                <span className="text-sm font-medium" style={{ color: verdictColor }}>
                   {scoreLabel}
                 </span>
               </div>
@@ -143,7 +150,7 @@ export function AuditResults({ results }: Props) {
                 {identity.est_actif !== undefined && identity.est_actif !== null && (
                   <div className="flex flex-col gap-1">
                     <span className="text-[10px] uppercase tracking-widest" style={{ color: "var(--au-text-dim)" }}>État</span>
-                    <span className="text-sm font-medium" style={{ color: identity.est_actif ? "#0cdda5" : "#f84b5f" }}>
+                    <span className="text-sm font-medium" style={{ color: identity.est_actif ? VERDICT.good : VERDICT.bad }}>
                       {identity.est_actif ? "Active" : "Radiée"}
                     </span>
                   </div>
@@ -245,14 +252,14 @@ export function AuditResults({ results }: Props) {
             className="rounded-2xl p-5 border flex flex-col gap-4"
             style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
           >
-            <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "var(--au-text-dim)" }}>
+            <p className="text-[10px] uppercase tracking-widest font-medium" style={{ color: "var(--au-text-dim)" }}>
               Score global
             </p>
             <div className="flex items-end gap-2">
-              <span className="text-5xl font-bold tabular-nums" style={{ color: scoreColor }}>
+              <span className="num text-5xl font-bold" style={{ color: verdictColor }}>
                 {global_score}
               </span>
-              <span className="text-xl mb-1" style={{ color: "var(--au-text-dim)" }}>/100</span>
+              <span className="num text-xl mb-1" style={{ color: "var(--au-text-dim)" }}>/100</span>
             </div>
             <CoverageLine coverage={coverage} />
             <ScoreBreakdown rows={score_breakdown} />
@@ -272,12 +279,12 @@ function AlertBanner({ alerts }: { alerts?: ScoreAlert[] }) {
     <div className="flex flex-col gap-2">
       {alerts.map((a, i) => {
         const critical = a.severity === "critique";
-        const color = critical ? "#f84b5f" : "#f5b454";
+        const color = critical ? VERDICT.bad : VERDICT.warn;
         return (
           <div
             key={i}
             className="rounded-2xl p-5 border flex items-start gap-3"
-            style={{ background: critical ? "#1f0a0c" : "#1d1505", borderColor: `${color}55` }}
+            style={{ background: verdictWash(color), borderColor: `color-mix(in srgb, ${color} 34%, transparent)` }}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="shrink-0 mt-0.5">
               <path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" stroke={color} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
@@ -287,7 +294,7 @@ function AlertBanner({ alerts }: { alerts?: ScoreAlert[] }) {
               {a.details && a.details.length > 0 && (
                 <ul className="flex flex-col gap-0.5">
                   {a.details.map((d, j) => (
-                    <li key={j} className="text-xs" style={{ color: critical ? "#cf8a8f" : "#cdb784" }}>{d}</li>
+                    <li key={j} className="text-xs" style={{ color: "var(--au-text-muted)" }}>{d}</li>
                   ))}
                 </ul>
               )}
@@ -302,10 +309,10 @@ function AlertBanner({ alerts }: { alerts?: ScoreAlert[] }) {
 function CoverageLine({ coverage }: { coverage?: Coverage }) {
   if (!coverage) return null;
   const color =
-    coverage.confidence === "élevée" ? "#0cdda5" :
-    coverage.confidence === "moyenne" ? "#f5b454" : "#f84b5f";
+    coverage.confidence === "élevée" ? VERDICT.good :
+    coverage.confidence === "moyenne" ? VERDICT.warn : VERDICT.bad;
   return (
-    <p className="text-[11px]" style={{ color: "#5a5a5a" }}>
+    <p className="text-[11px]" style={{ color: "var(--au-text-faint)" }}>
       Score basé sur {coverage.evaluated}/{coverage.total} sources ·{" "}
       <span style={{ color }}>confiance {coverage.confidence}</span>
     </p>
@@ -314,9 +321,9 @@ function CoverageLine({ coverage }: { coverage?: Coverage }) {
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="text-sm font-semibold" style={{ color: "var(--au-text-muted)" }}>
+    <h2 className="text-sm font-semibold" style={{ color: "var(--au-text-muted)" }}>
       {children}
-    </h3>
+    </h2>
   );
 }
 
@@ -341,8 +348,8 @@ function ScoreRing({ score, color }: { score: number; color: string }) {
 
   return (
     <div className="relative shrink-0 size-[96px] flex items-center justify-center">
-      <svg width="96" height="96" viewBox="0 0 96 96" className="absolute inset-0 -rotate-90">
-        <circle cx="48" cy="48" r={r} fill="none" stroke="#1e1e1e" strokeWidth="6" />
+      <svg width="96" height="96" viewBox="0 0 96 96" className="absolute inset-0 -rotate-90" aria-hidden="true">
+        <circle cx="48" cy="48" r={r} fill="none" stroke="var(--au-border)" strokeWidth="6" />
         <circle
           cx="48"
           cy="48"
@@ -355,17 +362,13 @@ function ScoreRing({ score, color }: { score: number; color: string }) {
         />
       </svg>
       <div className="relative flex items-baseline gap-0.5">
-        <span className="text-[22px] font-bold tabular-nums leading-none" style={{ color }}>
+        <span className="num text-[22px] font-bold leading-none" style={{ color }}>
           {score}
         </span>
-        <span className="text-sm" style={{ color }}>%</span>
+        <span className="num text-sm" style={{ color }}>%</span>
       </div>
     </div>
   );
-}
-
-function scoreColor(score: number): string {
-  return score >= 70 ? "#0cdda5" : score >= 40 ? "#f5b454" : "#f84b5f";
 }
 
 function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
@@ -390,8 +393,12 @@ function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-1.5 rounded-full overflow-hidden" style={{ background: "var(--au-border)" }}>
                   <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${r.available && r.score !== null ? r.score : 0}%`, background: color }}
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${r.available && r.score !== null ? r.score : 0}%`,
+                      background: color,
+                      transition: "width var(--animate-duration-reveal) var(--ease-out)",
+                    }}
                   />
                 </div>
                 <span className="text-[11px] font-medium tabular-nums shrink-0 w-12 text-right" style={{ color }}>
@@ -441,7 +448,7 @@ function platformLabel(platform: string): string {
 }
 
 function confidenceColor(confidence: number): string {
-  return confidence >= 80 ? "#0cdda5" : confidence >= 70 ? "#f5b454" : "var(--au-text-muted)";
+  return confidence >= 80 ? VERDICT.good : confidence >= 70 ? VERDICT.warn : "var(--au-text-muted)";
 }
 
 function SocialRow({ hit }: { hit: SocialHit }) {
@@ -451,7 +458,7 @@ function SocialRow({ hit }: { hit: SocialHit }) {
   const verified = hit.verified === true;
   const official = hit.official === true;
   const statusLabel = official ? "Officiel" : "Probablement officiel";
-  const statusColor = official ? "#0cdda5" : "#f5b454";
+  const statusColor = official ? VERDICT.good : VERDICT.warn;
 
   const reasons = (hit.confidence_reasons ?? []).slice(0, 4).join(" · ");
 
@@ -472,9 +479,9 @@ function SocialRow({ hit }: { hit: SocialHit }) {
             <span className="text-sm font-medium flex items-center gap-1" style={{ color: "var(--au-text)" }}>
               {label}
               {verified && (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="#0cdda5" aria-label="Compte vérifié">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill={VERDICT.good} aria-label="Compte vérifié">
                   <path d="M12 2l2.4 1.8 3 .2.9 2.9 2.4 1.8-1 2.8 1 2.8-2.4 1.8-.9 2.9-3 .2L12 22l-2.4-1.8-3-.2-.9-2.9L3.3 15l1-2.8-1-2.8 2.4-1.8.9-2.9 3-.2z" />
-                  <path d="M9.5 12.5l1.8 1.8 3.5-3.8" stroke="#141414" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+                  <path d="M9.5 12.5l1.8 1.8 3.5-3.8" stroke="var(--verdict-good-on)" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </span>
@@ -489,7 +496,7 @@ function SocialRow({ hit }: { hit: SocialHit }) {
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <span
             className="text-[10px] font-semibold px-2 py-0.5 rounded-full hidden sm:inline-block"
-            style={{ color: statusColor, background: `${statusColor}14` }}
+            style={{ color: statusColor, background: verdictWash(statusColor) }}
           >
             {statusLabel}
           </span>
@@ -507,10 +514,11 @@ function SocialRow({ hit }: { hit: SocialHit }) {
               href={hit.profile_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="size-7 rounded-lg flex items-center justify-center shrink-0 transition-all hover:opacity-70 active:scale-95"
+              aria-label={`Ouvrir le profil ${label}${username ? ` @${username}` : ""} (nouvel onglet)`}
+              className="tap-target size-7 rounded-lg flex items-center justify-center shrink-0 transition-all hover:opacity-70 active:scale-95"
               style={{ background: "var(--au-border-strong)" }}
             >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M7 17L17 7M17 7H7M17 7V17" stroke="#808080" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </a>
@@ -552,13 +560,12 @@ function SocialIcon({ platform }: { platform: string }) {
 function BlacklistCard({ data }: { data: PillarData | undefined }) {
   const isBlacklisted = data?.is_blacklisted as boolean | undefined;
   const present = isBlacklisted === true;
-  const accentColor = present ? "#f84b5f" : "#0cdda5";
-  const bgColor = present ? "#1f0a0c" : "#061512";
+  const accentColor = present ? VERDICT.bad : VERDICT.good;
 
   return (
     <div
       className="rounded-2xl p-5 border flex flex-col gap-4"
-      style={{ background: bgColor, borderColor: present ? "#f84b5f22" : "#0cdda522" }}
+      style={{ background: verdictWash(accentColor), borderColor: `color-mix(in srgb, ${accentColor} 28%, transparent)` }}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
@@ -571,7 +578,7 @@ function BlacklistCard({ data }: { data: PillarData | undefined }) {
         </div>
         <div
           className="size-8 rounded-full flex items-center justify-center shrink-0"
-          style={{ background: `${accentColor}18` }}
+          style={{ background: verdictWash(accentColor) }}
         >
           {present ? (
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
@@ -598,7 +605,7 @@ function ComplianceLine({ label, present }: { label: string; present: boolean })
       <span className="text-xs" style={{ color: "var(--au-text-faint)" }}>{label}</span>
       <span
         className="text-xs font-medium"
-        style={{ color: present ? "#f84b5f" : "#0cdda5" }}
+        style={{ color: present ? VERDICT.bad : VERDICT.good }}
       >
         {present ? "Présent" : "Non présent"}
       </span>
@@ -628,7 +635,7 @@ function ReputationSection({ data }: { data?: PillarData }) {
   const n = articles.length;
   const summary = (data?.summary as string) || "Aucun article notable détecté.";
   const rationale = (data?.score_rationale as string) || "";
-  const color = harm > 0 ? "#f84b5f" : "#0cdda5";
+  const color = harm > 0 ? VERDICT.bad : VERDICT.good;
 
   return (
     <div className="rounded-2xl p-5 border flex flex-col gap-3" style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}>
@@ -636,21 +643,21 @@ function ReputationSection({ data }: { data?: PillarData }) {
         <p className="text-xs leading-relaxed flex-1" style={{ color: "var(--au-text-muted)" }}>{summary}</p>
         <span
           className="text-xs font-semibold shrink-0 px-2.5 py-1 rounded-full"
-          style={{ color, background: `${color}14` }}
+          style={{ color, background: verdictWash(color) }}
         >
           {n} article{n > 1 ? "s" : ""} trouvé{n > 1 ? "s" : ""}
         </span>
       </div>
       {n > 0 && (
         <div className="flex flex-wrap gap-2">
-          <ImpactChip color="#0cdda5" n={fav} label="favorable" />
-          <ImpactChip color="#8a8a8a" n={neu} label="neutre" />
-          <ImpactChip color="#f84b5f" n={harm} label="défavorable" />
+          <ImpactChip color={VERDICT.good} n={fav} label="favorable" />
+          <ImpactChip color="var(--au-text-muted)" n={neu} label="neutre" />
+          <ImpactChip color={VERDICT.bad} n={harm} label="défavorable" />
         </div>
       )}
       {rationale && (
         <p className="text-[11px] leading-relaxed px-3 py-2 rounded-lg" style={{ color: "var(--au-text-muted)", background: "var(--au-inset)" }}>
-          <span className="font-semibold" style={{ color: "#aaa" }}>Justification du score : </span>
+          <span className="font-semibold" style={{ color: "var(--au-text-muted)" }}>Justification du score : </span>
           {rationale}
         </p>
       )}
@@ -662,7 +669,7 @@ function ImpactChip({ color, n, label }: { color: string; n: number; label: stri
   return (
     <span
       className="text-[11px] font-medium px-2 py-0.5 rounded-full"
-      style={{ color, background: `${color}14` }}
+      style={{ color, background: verdictWash(color) }}
     >
       {n} {label}{n > 1 ? "s" : ""}
     </span>
@@ -670,9 +677,9 @@ function ImpactChip({ color, n, label }: { color: string; n: number; label: stri
 }
 
 function eventColor(type: string): string {
-  if (type === "condamnation") return "#f84b5f";
-  if (type === "enquete" || type === "plainte") return "#f5b454";
-  return "#8a8a8a";
+  if (type === "condamnation") return VERDICT.bad;
+  if (type === "enquete" || type === "plainte") return VERDICT.warn;
+  return "var(--au-text-muted)";
 }
 
 function TimelineView({ timeline }: { timeline: Timeline }) {
@@ -726,15 +733,15 @@ function AuditTrailView({ trail }: { trail: AuditTrailEntry[] }) {
               ) : (
                 // Consultée : check vert si info trouvée, check gris si « rien à signaler ».
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="10" fill={t.found ? "#0cdda51f" : "#6a6a6a1f"} />
-                  <path d="M8 12.5L11 15.5L16.5 9" stroke={t.found ? "#0cdda5" : "var(--au-text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="12" cy="12" r="10" fill={t.found ? verdictWash(VERDICT.good) : "color-mix(in srgb, var(--au-text-muted) 12%, transparent)"} />
+                  <path d="M8 12.5L11 15.5L16.5 9" stroke={t.found ? VERDICT.good : "var(--au-text-muted)"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               )}
             </span>
             <span className="text-sm truncate" style={{ color: "var(--au-text)" }}>{t.source}</span>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[11px] truncate max-w-40 sm:max-w-55 text-right" style={{ color: t.found ? "#8a8a8a" : "var(--au-text-faint)" }}>
+            <span className="text-[11px] truncate max-w-40 sm:max-w-55 text-right" style={{ color: t.found ? "var(--au-text-muted)" : "var(--au-text-faint)" }}>
               {t.result}
             </span>
             {t.evidence_url && (
@@ -742,10 +749,11 @@ function AuditTrailView({ trail }: { trail: AuditTrailEntry[] }) {
                 href={t.evidence_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="size-6 rounded-md flex items-center justify-center shrink-0 transition-all hover:opacity-70"
+                aria-label={`Ouvrir la source : ${t.source} (nouvel onglet)`}
+                className="tap-target size-6 rounded-md flex items-center justify-center shrink-0 transition-all hover:opacity-70"
                 style={{ background: "var(--au-border-strong)" }}
               >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M7 17L17 7M17 7H7M17 7V17" stroke="#808080" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </a>
@@ -758,9 +766,9 @@ function AuditTrailView({ trail }: { trail: AuditTrailEntry[] }) {
 }
 
 const IMPACT_META: Record<string, { label: string; color: string }> = {
-  harmful: { label: "Défavorable", color: "#f84b5f" },
+  harmful: { label: "Défavorable", color: VERDICT.bad },
   neutral: { label: "Neutre", color: "var(--au-text-muted)" },
-  favorable: { label: "Favorable", color: "#0cdda5" },
+  favorable: { label: "Favorable", color: VERDICT.good },
 };
 
 function mediaName(url: string): string {
@@ -804,22 +812,22 @@ function EvidenceSection({ data }: { data?: PillarData }) {
           return (
             <div
               key={i}
-              className="rounded-xl border p-4 flex flex-col gap-1.5 border-l-2"
-              style={{ background: "var(--au-surface)", borderColor: "var(--au-border)", borderLeftColor: meta.color }}
+              className="rounded-xl border p-4 flex flex-col gap-1.5"
+              style={{ background: "var(--au-surface)", borderColor: `color-mix(in srgb, ${meta.color} 22%, var(--au-border))` }}
             >
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-[11px] font-medium" style={{ color: "var(--au-text-muted)" }}>{media || "Source"}</span>
                 {!!a.year && <span className="text-[11px]" style={{ color: "var(--au-text-faint)" }}>· {a.year}</span>}
                 <span
                   className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
-                  style={{ color: meta.color, background: `${meta.color}14` }}
+                  style={{ color: meta.color, background: verdictWash(meta.color) }}
                 >
                   {meta.label}
                 </span>
                 {a.event_type && EVENT_LABELS[a.event_type] && (
                   <span
                     className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded-full"
-                    style={{ color: eventColor(a.event_type), background: `${eventColor(a.event_type)}14` }}
+                    style={{ color: eventColor(a.event_type), background: verdictWash(eventColor(a.event_type)) }}
                   >
                     {EVENT_LABELS[a.event_type]}
                   </span>

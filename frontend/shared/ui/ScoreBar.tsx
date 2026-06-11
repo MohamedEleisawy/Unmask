@@ -12,8 +12,8 @@ export function ScoreBar({ score }: Props) {
     <div className="flex items-center gap-2">
       <div className="w-24 h-[3px] bg-[var(--color-line-strong)] rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-[width] duration-500 ease-out"
-          style={{ width: `${clamped}%`, background: tone }}
+          className="h-full rounded-full"
+          style={{ width: `${clamped}%`, background: tone, transition: "width var(--animate-duration-reveal) var(--ease-out)" }}
         />
       </div>
       <span className="num text-[11px] text-[var(--color-fg-muted)]">{score}<span className="text-[var(--color-fg-faint)]">/100</span></span>
