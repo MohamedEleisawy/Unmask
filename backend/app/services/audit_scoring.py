@@ -168,8 +168,8 @@ def compute_alerts(pillars: dict) -> list[dict]:
         alerts.append({
             "type": "multiple_closed_companies",
             "severity": "warning",
-            "message": f"{closed} entreprise(s) fermée(s)/radiée(s) liées à ce nom sur {examined} examinée(s).",
-            "details": [f"{closed}/{examined} entités au statut fermé/radié/cessé"],
+            "message": f"{closed} entreprise(s) fermée(s)/radiée(s) au nom de ce dirigeant sur {examined} examinée(s).",
+            "details": [f"{closed}/{examined} entités du même dirigeant au statut fermé/radié/cessé"],
         })
 
     return alerts

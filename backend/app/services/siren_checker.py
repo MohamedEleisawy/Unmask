@@ -88,6 +88,16 @@ def _format_dirigeant(dirigeants: Optional[list]) -> Optional[str]:
     return name or qualite or None
 
 
+def _dirigeant_key(result: dict) -> str:
+    """Clé normalisée du 1er dirigeant, pour regrouper les sociétés d'une même personne."""
+    dirs = result.get("dirigeants") or []
+    if not dirs:
+        return ""
+    d = dirs[0] or {}
+    raw = d.get("denomination") or f"{d.get('prenoms', '')} {d.get('nom', '')}"
+    return " ".join(raw.lower().split())
+
+
 def _parse_result(data: dict) -> LegalIdentity:
     """Extrait les champs utiles d'un resultat brut de l'API."""
     siege = data.get("siege") or {}
@@ -157,8 +167,14 @@ async def check_legal_identity(
     if not identity.est_actif:
         warning = f"La societe '{identity.nom}' existe dans le registre mais est fermee (radiation)."
 
-    # Comptage des entreprises fermées/radiées parmi les résultats (état != "A").
-    closed = sum(1 for r in results if r.get("etat_administratif") not in ("A", None))
+    # Radiations : on ne compte QUE les sociétés partageant le même dirigeant que
+    # l'entité principale, pour éviter de compter des homonymes sans lien.
+    primary_key = _dirigeant_key(results[0])
+    if primary_key:
+        same_owner = [r for r in results if _dirigeant_key(r) == primary_key]
+    else:
+        same_owner = [results[0]]
+    closed = sum(1 for r in same_owner if r.get("etat_administratif") not in ("A", None))
 
     return LegalCheckResult(
         found=True,
@@ -166,5 +182,5 @@ async def check_legal_identity(
         query_used=query,
         warning=warning,
         closed_companies_count=closed,
-        examined_companies_count=len(results),
+        examined_companies_count=len(same_owner),
     )
