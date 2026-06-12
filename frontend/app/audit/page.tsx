@@ -19,6 +19,7 @@ function AuditPageInner() {
   const params = useSearchParams();
   const router = useRouter();
   const query = params.get("q") ?? "";
+  const site = params.get("site") ?? "";
 
   // Flux en 2 étapes : 1) pré-vérification d'identité → 2) audit complet après validation.
   const [phase, setPhase] = useState<"searching" | "confirm" | "auditing" | "done">("searching");
@@ -26,8 +27,14 @@ function AuditPageInner() {
   const [results, setResults] = useState<AuditResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  // Deux champs distincts : le nom part toujours en `entity_name`, le site
+  // (optionnel) en `url` — c'est ce champ que RDAP consomme pour l'âge du domaine.
+  // Rétro-compat : un ancien lien `?q=monsite.fr` (sans `site`) garde l'ancien
+  // découpage automatique nom/URL.
   const isUrl = query.startsWith("http") || (query.includes(".") && !query.includes(" "));
-  const payload = { entity_name: !isUrl ? query : undefined, url: isUrl ? query : undefined };
+  const payload = site
+    ? { entity_name: query || undefined, url: site }
+    : { entity_name: !isUrl ? query : undefined, url: isUrl ? query : undefined };
 
   // Étape 1 — recherche rapide d'identité (sans audit complet).
   useEffect(() => {

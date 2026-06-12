@@ -3,15 +3,35 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+/** Valide un site : domaine nu (monsite.fr) ou URL complète (https://monsite.fr). */
+function isValidWebsite(raw: string): boolean {
+  const host = raw.trim().replace(/^https?:\/\//i, "").split("/")[0];
+  return /^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(host);
+}
+
 export function LandingHero() {
   const [query, setQuery] = useState("");
+  const [website, setWebsite] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (query.trim()) {
-      router.push(`/audit?q=${encodeURIComponent(query.trim())}`);
+    const name = query.trim();
+    const site = website.trim();
+    if (!name) {
+      setError("Indiquez le nom de la personne à auditer.");
+      return;
     }
+    if (site && !isValidWebsite(site)) {
+      setError("Adresse de site invalide (ex. monsite.fr ou https://monsite.fr).");
+      return;
+    }
+    // Le nom part toujours en `q` ; le site (optionnel) en `site` → mappé sur
+    // le champ `url` de l'API côté page audit (contrat existant, consommé par RDAP).
+    const params = new URLSearchParams({ q: name });
+    if (site) params.set("site", site);
+    router.push(`/audit?${params.toString()}`);
   }
 
   return (
@@ -31,25 +51,39 @@ export function LandingHero() {
             Insérez un nom ou un pseudo pour vérifier l&apos;identité et la crédibilité d&apos;un influenceur, coach ou vendeur en ligne.
           </p>
 
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
-            <div className="relative w-[310px] md:w-[340px] h-[49px] rounded-[32px] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#936bff]">
-              <div className="absolute inset-0 bg-[#eee] rounded-[32px]" />
-              <div className="absolute inset-0 flex items-center gap-2 pl-[18px]">
-                <div className="relative shrink-0 size-4">
-                  <img alt="" className="absolute inset-0 size-full object-contain" src="/landing/search-dark.svg" />
-                </div>
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Nom ou pseudo"
-                  className="bg-transparent font-landing-body text-[13px] text-[#25141d] placeholder:text-[#25141d]/50 outline-none w-full"
-                />
-              </div>
-            </div>
+          <form onSubmit={handleSubmit} className="flex flex-col items-center md:items-start gap-3 w-full md:w-auto">
+            {/* Champ obligatoire — la personne à auditer */}
+            <PillField
+              icon={<img alt="" className="absolute inset-0 size-full object-contain" src="/landing/search-dark.svg" />}
+              value={query}
+              onChange={(v) => { setQuery(v); setError(null); }}
+              placeholder="Nom de la personne ou pseudo"
+              ariaLabel="Nom de la personne, de l'influenceur ou de l'entrepreneur"
+            />
+
+            {/* Champ optionnel — le site web officiel (active l'analyse RDAP) */}
+            <PillField
+              icon={<GlobeIcon />}
+              value={website}
+              onChange={(v) => { setWebsite(v); setError(null); }}
+              placeholder="Site web officiel (optionnel)"
+              ariaLabel="Site web officiel (optionnel)"
+              inputMode="url"
+            />
+
+            <p className="font-landing-body text-[12px] leading-snug max-w-[340px] text-center md:text-left" style={{ color: "var(--au-text-faint)" }}>
+              Si un site est fourni, Unmask analysera également le nom de domaine (ancienneté, registrar et signaux de confiance).
+            </p>
+
+            {error && (
+              <p role="alert" className="font-landing-body text-[12px] max-w-[340px] text-center md:text-left" style={{ color: "#f84b5f" }}>
+                {error}
+              </p>
+            )}
+
             <button
               type="submit"
-              className="font-landing-body font-bold bg-[#936bff] text-[#eee] text-[16px] h-[49px] px-6 rounded-[32px] whitespace-nowrap hover:bg-[#7d54f0] active:scale-95 transition-all"
+              className="font-landing-body font-bold bg-[#936bff] text-[#eee] text-[16px] h-[49px] px-6 rounded-[32px] whitespace-nowrap hover:bg-[#7d54f0] active:scale-95 transition-all w-[310px] md:w-auto"
             >
               Vérifier ce profil
             </button>
@@ -62,6 +96,52 @@ export function LandingHero() {
         </div>
       </div>
     </section>
+  );
+}
+
+/** Champ « pilule » blanc réutilisable (nom + site), au design de la marque. */
+function PillField({
+  icon,
+  value,
+  onChange,
+  placeholder,
+  ariaLabel,
+  inputMode,
+}: {
+  icon: React.ReactNode;
+  value: string;
+  onChange: (v: string) => void;
+  placeholder: string;
+  ariaLabel: string;
+  inputMode?: "url";
+}) {
+  return (
+    <div className="relative w-[310px] md:w-[340px] h-[49px] rounded-[32px] focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-[#936bff]">
+      <div className="absolute inset-0 bg-[#eee] rounded-[32px]" />
+      <div className="absolute inset-0 flex items-center gap-2 px-[18px]">
+        <div className="relative shrink-0 size-4">{icon}</div>
+        <input
+          type="text"
+          inputMode={inputMode}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          className="bg-transparent font-landing-body text-[13px] text-[#25141d] placeholder:text-[#25141d]/50 outline-none w-full"
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Globe — icône du champ site web (teinte sombre pour la pilule blanche). */
+function GlobeIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className="absolute inset-0 size-full" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="#25141d" strokeWidth="1.6" />
+      <path d="M3 12h18" stroke="#25141d" strokeWidth="1.6" />
+      <path d="M12 3c2.4 2.5 2.4 15.5 0 18M12 3c-2.4 2.5-2.4 15.5 0 18" stroke="#25141d" strokeWidth="1.6" />
+    </svg>
   );
 }
 

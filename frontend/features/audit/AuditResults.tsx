@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AuditResponse, AuditTrailEntry, Coverage, PillarData, ScoreAlert, ScoreBreakdownRow, Timeline } from "./types";
+import type { AuditResponse, AuditTrailEntry, Coverage, DomainIntelligence, PillarData, ScoreAlert, ScoreBreakdownRow, Timeline } from "./types";
 import { generateAuditPdf } from "./generatePdf";
 import { VERDICT, scoreColor, verdictWash } from "@/shared/ui/verdict";
 
@@ -31,7 +31,7 @@ export function AuditResults({ results }: Props) {
     }
   };
 
-  const { global_score, entity, pillars, disclaimer, score_breakdown, audit_trail, timeline, alerts, coverage } = results;
+  const { global_score, entity, pillars, disclaimer, score_breakdown, audit_trail, timeline, alerts, coverage, domain_intelligence } = results;
   const entityName = entity.name || entity.url || "Entité auditée";
   const verdictColor = scoreColor(global_score);
   const scoreLabel = global_score >= 70 ? "Profil vérifié" : global_score >= 40 ? "Partiellement vérifié" : "Peu d'éléments vérifiables";
@@ -129,6 +129,9 @@ export function AuditResults({ results }: Props) {
               <CoverageLine coverage={coverage} />
             </div>
           </div>
+
+          {/* Périmètre analysé — clarifie ce qui a servi à générer le score */}
+          <AnalyzedScope name={entity.name} url={entity.url} />
 
           {/* Entreprise associée — purement descriptif, n'influence pas le score */}
           <section className="flex flex-col gap-4">
@@ -247,6 +250,14 @@ export function AuditResults({ results }: Props) {
             <BlacklistCard data={complianceData} />
           </section>
 
+          {/* Âge du nom de domaine (RDAP) — signal informatif, hors score */}
+          {domain_intelligence && domain_intelligence.available && (
+            <section className="flex flex-col gap-4">
+              <SectionTitle>Nom de domaine</SectionTitle>
+              <DomainCard data={domain_intelligence} />
+            </section>
+          )}
+
           {/* Résumé score */}
           <div
             className="rounded-2xl p-5 border flex flex-col gap-4"
@@ -324,6 +335,35 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     <h2 className="text-sm font-semibold" style={{ color: "var(--au-text-muted)" }}>
       {children}
     </h2>
+  );
+}
+
+function AnalyzedScope({ name, url }: { name?: string; url?: string }) {
+  return (
+    <section className="flex flex-col gap-4">
+      <SectionTitle>Éléments analysés</SectionTitle>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <ScopeItem emoji="👤" label="Personne auditée" value={name || "—"} active={!!name} />
+        <ScopeItem emoji="🌐" label="Site web analysé" value={url || "Aucun site fourni"} active={!!url} />
+      </div>
+    </section>
+  );
+}
+
+function ScopeItem({ emoji, label, value, active }: { emoji: string; label: string; value: string; active: boolean }) {
+  return (
+    <div
+      className="rounded-2xl p-4 border flex items-center gap-3"
+      style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
+    >
+      <span className="text-xl shrink-0" aria-hidden="true">{emoji}</span>
+      <div className="flex flex-col min-w-0">
+        <span className="text-[10px] uppercase tracking-widest" style={{ color: "var(--au-text-dim)" }}>{label}</span>
+        <span className="text-sm font-medium truncate" style={{ color: active ? "var(--au-text)" : "var(--au-text-faint)" }}>
+          {value}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -608,6 +648,86 @@ function ComplianceLine({ label, present }: { label: string; present: boolean })
         style={{ color: present ? VERDICT.bad : VERDICT.good }}
       >
         {present ? "Présent" : "Non présent"}
+      </span>
+    </div>
+  );
+}
+
+const DOMAIN_RISK_META: Record<string, { label: string; color: string }> = {
+  critical: { label: "Critique", color: VERDICT.bad },
+  high: { label: "Élevé", color: VERDICT.bad },
+  medium: { label: "Modéré", color: VERDICT.warn },
+  low: { label: "Faible", color: VERDICT.good },
+};
+
+function formatAge(days: number): string {
+  if (days < 31) return `${days} jour${days > 1 ? "s" : ""}`;
+  if (days < 365) {
+    const m = Math.round(days / 30);
+    return `${m} mois`;
+  }
+  const y = Math.floor(days / 365);
+  const rem = Math.round((days % 365) / 30);
+  return rem > 0 ? `${y} an${y > 1 ? "s" : ""} ${rem} mois` : `${y} an${y > 1 ? "s" : ""}`;
+}
+
+function DomainCard({ data }: { data: DomainIntelligence }) {
+  const meta = (data.risk_level && DOMAIN_RISK_META[data.risk_level]) || {
+    label: "Indéterminé",
+    color: "var(--au-text-muted)",
+  };
+  const recent = data.risk_level === "critical" || data.risk_level === "high";
+
+  return (
+    <div
+      className="rounded-2xl p-5 border flex flex-col gap-4"
+      style={{
+        background: recent ? verdictWash(meta.color) : "var(--au-surface)",
+        borderColor: recent ? `color-mix(in srgb, ${meta.color} 28%, transparent)` : "var(--au-border)",
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-1 min-w-0">
+          <p className="text-sm font-semibold truncate" style={{ color: "var(--au-text)" }}>
+            {data.domain}
+          </p>
+          <p className="text-xs" style={{ color: "var(--au-text-faint)" }}>
+            Âge du domaine (RDAP)
+          </p>
+        </div>
+        <span
+          className="text-[10px] font-semibold px-2.5 py-1 rounded-full shrink-0"
+          style={{ color: meta.color, background: verdictWash(meta.color) }}
+        >
+          Risque {meta.label}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        {data.age_days !== null && (
+          <DomainLine label="Ancienneté" value={formatAge(data.age_days)} valueColor={meta.color} />
+        )}
+        {data.created_at && (
+          <DomainLine label="Création" value={formatFrDate(data.created_at)} />
+        )}
+        {data.registrar && <DomainLine label="Registrar" value={data.registrar} />}
+      </div>
+
+      {recent && (
+        <p className="text-[11px] leading-relaxed pt-2 border-t" style={{ color: "var(--au-text-faint)", borderColor: `color-mix(in srgb, ${meta.color} 20%, transparent)` }}>
+          Un domaine récent n’est pas une preuve de fraude, mais c’est un signal de prudence. Ce critère n’affecte pas le score.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DomainLine({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-xs shrink-0" style={{ color: "var(--au-text-faint)" }}>{label}</span>
+      <span className="text-xs font-medium truncate text-right" style={{ color: valueColor || "var(--au-text-muted)" }}>
+        {value}
       </span>
     </div>
   );

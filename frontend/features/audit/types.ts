@@ -46,6 +46,20 @@ export type Coverage = {
   confidence: string;
 };
 
+export type DomainRisk = "critical" | "high" | "medium" | "low";
+
+export type DomainIntelligence = {
+  domain: string;
+  created_at: string | null;
+  age_days: number | null;
+  registrar: string | null;
+  status?: string[];
+  risk_level: DomainRisk | null;
+  available: boolean;
+  reason?: string;
+  source?: string;
+};
+
 export type AuditResponse = {
   entity: AuditEntity;
   global_score: number;
@@ -57,6 +71,7 @@ export type AuditResponse = {
   disclaimer: string;
   alerts?: ScoreAlert[];
   coverage?: Coverage;
+  domain_intelligence?: DomainIntelligence | null;
 };
 
 export type PillarData = Record<string, unknown>;
