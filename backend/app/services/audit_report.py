@@ -112,6 +112,25 @@ def build_audit_trail(pillars: dict) -> list[dict]:
             result=result,
         ))
 
+    # Âge du nom de domaine (RDAP) — source technique, distincte du score.
+    domain_intel = pillars.get("domain_intelligence")
+    if domain_intel:
+        available = domain_intel.get("available") is not False
+        age = domain_intel.get("age_days")
+        domain = domain_intel.get("domain") or ""
+        if available and age is not None:
+            result = f"Domaine créé il y a {age} jours"
+        elif available:
+            result = "Date de création indisponible"
+        else:
+            result = f"Indisponible — {domain_intel.get('reason') or 'RDAP injoignable'}"
+        trail.append(_entry(
+            "RDAP (âge du domaine)",
+            consulted=True, found=available and age is not None, verified=available,
+            result=result,
+            evidence_url=f"https://rdap.org/domain/{domain}" if domain else None,
+        ))
+
     return trail
 
 

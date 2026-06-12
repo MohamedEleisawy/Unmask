@@ -2,6 +2,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { AnalysisProgress } from "@/features/audit/AnalysisProgress";
 import { AuditResults } from "@/features/audit/AuditResults";
 import { fetchAuditPreview, fetchFullAudit } from "@/features/audit/api";
 import type { AuditPreview, AuditResponse } from "@/features/audit/types";
@@ -25,6 +26,9 @@ function AuditPageInner() {
   const [phase, setPhase] = useState<"searching" | "confirm" | "auditing" | "done">("searching");
   const [preview, setPreview] = useState<AuditPreview | null>(null);
   const [results, setResults] = useState<AuditResponse | null>(null);
+  // Résultat reçu mais pas encore révélé : on laisse la barre atteindre 100 %
+  // (son + notification) avant d'afficher le rapport.
+  const [pendingResults, setPendingResults] = useState<AuditResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Deux champs distincts : le nom part toujours en `entity_name`, le site
@@ -48,6 +52,7 @@ function AuditPageInner() {
     setPhase("searching");
     setPreview(null);
     setResults(null);
+    setPendingResults(null);
     setError(null);
 
     fetchAuditPreview(payload)
@@ -59,15 +64,27 @@ function AuditPageInner() {
   }, [query, router]);
 
   // Étape 2 — audit complet, seulement après confirmation de l'utilisateur.
+  // On stocke le résultat sans basculer en « done » : la carte d'analyse le
+  // révèle elle-même une fois la barre à 100 % (cf. onReveal).
   const runFullAudit = async () => {
     setPhase("auditing");
     setError(null);
+    setPendingResults(null);
     try {
       const data = await fetchFullAudit(payload);
-      setResults(data);
-      setPhase("done");
+      setPendingResults(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erreur serveur.");
+    }
+  };
+
+  // Révélation du rapport après l'animation de fin (barre à 100 %).
+  // AnalysisProgress capture cette fonction via une ref : son identité peut
+  // changer sans effet de bord (la mémoïsation est laissée au React Compiler).
+  const revealResults = () => {
+    if (pendingResults) {
+      setResults(pendingResults);
+      setPhase("done");
     }
   };
 
@@ -109,7 +126,14 @@ function AuditPageInner() {
             onReject={() => router.replace("/")}
           />
         )}
-        {!error && phase === "auditing" && <AuditLoading query={query} />}
+        {!error && phase === "auditing" && (
+          <AnalysisProgress
+            query={query}
+            hasWebsite={!!site}
+            finished={!!pendingResults}
+            onReveal={revealResults}
+          />
+        )}
         {!error && phase === "done" && results && <AuditResults results={results} />}
       </main>
 
@@ -143,161 +167,6 @@ function UnmaskLogo() {
       <path d="M46.7688 6.51376C46.76 6.41836 46.7596 6.28945 46.7598 6.10187L46.7688 6.51376C46.7975 6.82518 46.915 6.77968 47.3863 7.25317C47.9064 7.77555 48.5835 8.08411 49.2806 8.30801C50.1599 8.59042 51.1066 8.50247 51.7003 9.35929C51.8377 9.55746 51.921 9.8236 51.9218 10.0638C51.9253 10.3398 51.8186 10.6057 51.6256 10.8021C51.2989 11.131 50.8386 11.272 50.3864 11.2688C49.9085 11.2654 49.4783 11.1235 49.1391 10.7791C48.6584 10.291 48.5234 9.52517 47.8227 9.27289C47.4744 9.1475 47.118 9.0913 46.8319 9.38995L46.7688 6.51376Z" fill="#936BFF"/>
       <circle cx="64.087" cy="10.9164" r="1.13043" fill="#EEEEEE"/>
     </svg>
-  );
-}
-
-function Bone({ w, h = "h-3", rounded = "rounded" }: { w: string; h?: string; rounded?: string }) {
-  return (
-    <div
-      className={`${w} ${h} ${rounded} animate-pulse shrink-0`}
-      style={{ background: "var(--au-border)" }}
-    />
-  );
-}
-
-function AuditLoading({ query }: { query: string }) {
-  return (
-    <div className="max-w-[1200px] mx-auto px-4 md:px-8 pt-8 pb-16" role="status" aria-busy="true">
-      <span className="sr-only" aria-live="polite">
-        Audit de @{query.replace(/^@/, "")} en cours…
-      </span>
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8 lg:gap-12 items-start" aria-hidden="true">
-
-        {/* Colonne principale */}
-        <div className="flex flex-col gap-8">
-
-          {/* Card score — reproduit le header résultat */}
-          <div
-            className="rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center gap-6 border"
-            style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
-          >
-            {/* Ring SVG placeholder */}
-            <div
-              className="shrink-0 size-[96px] rounded-full animate-pulse"
-              style={{ background: "var(--au-border)" }}
-            />
-            <div className="flex flex-col gap-3 flex-1 min-w-0">
-              <Bone w="w-20" h="h-2" />
-              {/* Nom de l'entité — on affiche la query */}
-              <p className="text-2xl font-bold font-landing-display truncate" style={{ color: "#f84b5f" }}>
-                @{query.replace(/^@/, "")}
-              </p>
-              <div className="flex items-center gap-2">
-                <div className="size-2 rounded-full animate-pulse" style={{ background: "var(--au-border-strong)" }} />
-                <Bone w="w-24" h="h-2.5" />
-              </div>
-              <Bone w="w-48" h="h-2" />
-            </div>
-          </div>
-
-          {/* Card identité légale */}
-          <div className="flex flex-col gap-4">
-            <Bone w="w-28" h="h-3" />
-            <div
-              className="rounded-2xl p-5 border grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-4"
-              style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
-            >
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex flex-col gap-2">
-                  <Bone w="w-16" h="h-2" />
-                  <Bone w={i % 3 === 0 ? "w-32" : i % 3 === 1 ? "w-24" : "w-20"} h="h-3" />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Présence en ligne */}
-          <div className="flex flex-col gap-4">
-            <Bone w="w-36" h="h-3" />
-            <div className="flex flex-col gap-2">
-              {[0, 1, 2].map((i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between h-12 rounded-xl px-4 border"
-                  style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="size-8 rounded-lg animate-pulse" style={{ background: "var(--au-border)" }} />
-                    <Bone w={i === 0 ? "w-28" : i === 1 ? "w-24" : "w-20"} h="h-3" />
-                  </div>
-                  <div className="size-7 rounded-lg animate-pulse" style={{ background: "var(--au-border)" }} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Critères détaillés */}
-          <div className="flex flex-col gap-4">
-            <Bone w="w-52" h="h-3" />
-            <div className="rounded-2xl overflow-hidden border" style={{ borderColor: "var(--au-border)" }}>
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={`flex items-start justify-between gap-6 px-5 py-4 ${i < 3 ? "border-b" : ""}`}
-                  style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
-                >
-                  <div className="flex flex-col gap-2 flex-1">
-                    <Bone w={i % 2 === 0 ? "w-36" : "w-44"} h="h-3" />
-                    <Bone w="w-48" h="h-2" />
-                  </div>
-                  <div className="h-6 w-20 rounded-full animate-pulse" style={{ background: "var(--au-border)" }} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Sidebar droite */}
-        <div className="flex flex-col gap-6 lg:sticky lg:top-20">
-
-          {/* Conformité */}
-          <div className="flex flex-col gap-4">
-            <Bone w="w-24" h="h-3" />
-            <div
-              className="rounded-2xl p-5 border flex flex-col gap-4"
-              style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex flex-col gap-2">
-                  <Bone w="w-36" h="h-3" />
-                  <Bone w="w-24" h="h-2" />
-                </div>
-                <div className="size-8 rounded-full animate-pulse" style={{ background: "var(--au-border)" }} />
-              </div>
-              <div className="flex flex-col gap-3">
-                {["AMF", "ACPR"].map((l) => (
-                  <div key={l} className="flex items-center justify-between">
-                    <Bone w="w-10" h="h-2" />
-                    <Bone w="w-20" h="h-2" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Score global */}
-          <div
-            className="rounded-2xl p-5 border flex flex-col gap-4"
-            style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
-          >
-            <Bone w="w-24" h="h-2" />
-            <div className="flex items-end gap-2">
-              <div className="w-16 h-12 rounded-lg animate-pulse" style={{ background: "var(--au-border)" }} />
-              <Bone w="w-10" h="h-5" />
-            </div>
-            <div className="flex flex-col gap-2.5">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i} className="flex items-center justify-between gap-3">
-                  <Bone w={i % 2 === 0 ? "w-28" : "w-32"} h="h-2" />
-                  <div className="h-5 w-10 rounded-full animate-pulse" style={{ background: "var(--au-border)" }} />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-      </div>
-    </div>
   );
 }
 

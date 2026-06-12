@@ -465,7 +465,7 @@ function ScoreBreakdown({ rows }: { rows?: ScoreBreakdownRow[] }) {
         })}
       </ul>
       <p className="text-[10px] leading-relaxed pt-1 border-t" style={{ color: "var(--au-text-dim)", borderColor: "var(--au-border)" }}>
-        Score global = somme des points. Les critères non calculables redistribuent leur poids sur les autres.
+        Score = réputation publique. Identité, réseaux et entreprise sont affichés à titre informatif et n&apos;entrent pas dans le score.
       </p>
     </div>
   );
@@ -710,7 +710,7 @@ function DomainCard({ data }: { data: DomainIntelligence }) {
         {data.created_at && (
           <DomainLine label="Création" value={formatFrDate(data.created_at)} />
         )}
-        {data.registrar && <DomainLine label="Registrar" value={data.registrar} />}
+        {data.registrar && <DomainLine label="Hébergeur" value={data.registrar} />}
       </div>
 
       {recent && (

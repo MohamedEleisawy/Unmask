@@ -1,4 +1,4 @@
-export type Verdict = "fiable" | "suspect" | "alerte";
+export type Verdict = "verifie" | "partiellement_verifie" | "peu_verifiable" | "alerte";
 
 export type AuditEntity = {
   name?: string;

@@ -2,7 +2,8 @@
 Route POST /audit/full - Orchestrateur de l'audit complet.
 
 Lance en parallele les services dont les inputs requis sont presents,
-puis calcule un score pondere sur 3 criteres (cf. audit_scoring).
+puis calcule le score : reputation notee + drapeaux reglementaires qui
+plafonnent (cf. audit_scoring).
 """
 
 import asyncio
@@ -21,6 +22,11 @@ from app.services.audit_scoring import (
     compute_coverage,
     compute_global_score,
     verdict_from_score,
+)
+from app.services.domain_intelligence import (
+    compute_domain_alerts,
+    extract_auditable_domain,
+    get_domain_info,
 )
 from app.services.handle_resolver import resolve_handle
 from app.services.reputation_analyzer import analyze_reputation
@@ -72,6 +78,12 @@ def _build_async_tasks(body: FullAuditRequest) -> dict[str, Awaitable]:
                 sector=body.sector, siren=body.siren,
             )
         tasks["compliance"] = _compliance()
+
+    # Signal « âge du domaine » (RDAP) — uniquement si un vrai site web est fourni
+    # (les profils de réseaux sociaux sont écartés par extract_auditable_domain).
+    domain = extract_auditable_domain(body.url)
+    if domain:
+        tasks["domain_intelligence"] = get_domain_info(domain)
 
     return tasks
 
@@ -170,7 +182,7 @@ async def audit_preview(body: FullAuditRequest):
     }
 
 
-@router.post("/full", summary="Audit complet - 3 criteres ponderes + presence sociale")
+@router.post("/full", summary="Audit complet - reputation notee + drapeaux reglementaires")
 async def full_audit(body: FullAuditRequest):
     """
     Lance les services disponibles en parallele.
@@ -182,8 +194,15 @@ async def full_audit(body: FullAuditRequest):
     breakdown = compute_breakdown(pillars)
     alerts = compute_alerts(pillars)
     score = apply_alert_cap(compute_global_score(pillars), alerts)
-    coverage = compute_coverage(breakdown)
+    coverage = compute_coverage(pillars)
     verdict = verdict_from_score(score, alerts)
+
+    # Signal domaine (RDAP) — STRICTEMENT informatif : ses alertes sont ajoutées
+    # APRÈS le plafonnement du score et le calcul du verdict, donc sans aucun
+    # impact sur global_score / verdict / score_breakdown.
+    domain_intel = pillars.get("domain_intelligence")
+    alerts = alerts + compute_domain_alerts(domain_intel)
+
     _log_audit_summary(body.entity_name, pillars, breakdown, score)
 
     return {
@@ -200,6 +219,7 @@ async def full_audit(body: FullAuditRequest):
         "coverage": coverage,
         "audit_trail": audit_trail,
         "timeline": timeline,
+        "domain_intelligence": domain_intel,
         "pillars": pillars,
         "disclaimer": _DISCLAIMER,
     }

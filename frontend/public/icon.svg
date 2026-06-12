@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-label="Unmask">
+  <rect width="512" height="512" rx="112" fill="#0b0e0d"/>
+  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#0cdda5" stroke-opacity="0.18" stroke-width="2"/>
+  <!-- Lentille d'analyse -->
+  <circle cx="224" cy="224" r="120" fill="none" stroke="#0cdda5" stroke-width="26"/>
+  <line x1="312" y1="312" x2="408" y2="408" stroke="#0cdda5" stroke-width="34" stroke-linecap="round"/>
+  <!-- Check de validation -->
+  <path d="M176 226l34 36 70 -78" fill="none" stroke="#0cdda5" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
