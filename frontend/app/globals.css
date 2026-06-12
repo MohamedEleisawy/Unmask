@@ -89,6 +89,41 @@
   --verdict-warn-on: #1d1505;
   --verdict-bad: #f84b5f;
   --verdict-bad-on: #1f0a0c;
+
+  /* ---- Tokens LANDING (--ld-*) ----
+     Palette propre à la landing, reprise de la maquette Figma. Défaut = CLAIR
+     (#eee / blanc / #25141d) ; bascule en sombre via [data-theme="dark"] et la
+     préférence système. Le violet de MARQUE (#936bff) reste fixe — c'est un
+     accent, pas un état — donc hors tokens. AA tenu dans les deux thèmes. */
+  --ld-bg: #eeeeee;          /* fond de page */
+  --ld-surface: #ffffff;     /* cartes, blocs blancs, pilules de champ */
+  --ld-text: #25141d;        /* texte principal (titres, corps) */
+  --ld-text-muted: #5b525a;  /* small print, aides — AA ≥ 5:1 */
+  --ld-text-faint: #6a626a;  /* labels discrets, placeholders — AA ≥ 5:1 */
+  --ld-border: rgba(37, 20, 29, 0.06);   /* hairline sur surface */
+  --ld-footer-link: #e1e1e1; /* liens du footer violet (fixe, sur violet) */
+  --ld-footer-copy: #dcdcdc; /* copyright du footer violet (fixe) */
+}
+
+/* Landing — mode sombre (toggle explicite OU préférence système sans override). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ld-bg: #131016;
+    --ld-surface: #1d1825;
+    --ld-text: #f3eef6;
+    --ld-text-muted: #b3a9bd;
+    --ld-text-faint: #9d93a8;
+    --ld-border: rgba(255, 255, 255, 0.08);
+  }
+}
+
+[data-theme="dark"] {
+  --ld-bg: #131016;
+  --ld-surface: #1d1825;
+  --ld-text: #f3eef6;
+  --ld-text-muted: #b3a9bd;
+  --ld-text-faint: #9d93a8;
+  --ld-border: rgba(255, 255, 255, 0.08);
 }
 
 @media (prefers-color-scheme: light) {

@@ -1,112 +1,95 @@
+import {
+  IconBadgeCheck,
+  IconStar,
+  IconTrendingUp,
+  IconLock,
+} from "@/features/landing/landingIcons";
+
+type Criterion = {
+  icon: (p: { className?: string }) => React.ReactElement;
+  tint: string;
+  title: string;
+  body: string;
+};
+
+/** 4 critères — Figma node 963:3243. Teintes : vert, violet, rouge, jaune. */
+const CRITERIA: Criterion[] = [
+  {
+    icon: IconBadgeCheck,
+    tint: "#0cdda5",
+    title: "Identité confirmée",
+    body: "Photo cohérente, présence publique identifiable et informations concordantes.",
+  },
+  {
+    icon: IconStar,
+    tint: "#936bff",
+    title: "Réseaux sociaux officiels",
+    body: "Identification des comptes officiels associés à la personne recherchée.",
+  },
+  {
+    icon: IconTrendingUp,
+    tint: "#f84b5f",
+    title: "Réputation publique",
+    body: "Articles, publications et mentions accessibles publiquement.",
+  },
+  {
+    icon: IconLock,
+    tint: "#fec530",
+    title: "Transparence de l'audit",
+    body: "Chaque critère analysé est visible et justifié par ses sources.",
+  },
+];
+
+/**
+ * « Comment calculons-nous l'indice de confiance ? » — Figma node 963:3237.
+ * En-tête (titre Quatty 32px + paragraphe) puis bloc blanc pleine largeur avec
+ * 4 critères en liste. Remplace l'ancien « Comment ça fonctionne ».
+ */
 export function LandingHowItWorks() {
   return (
-    <section id="how" className="w-full max-w-[1200px] mx-auto px-4 md:px-10 pb-24">
+    <section id="how" className="flex w-full flex-col gap-[32px] md:gap-12" data-node-id="963:3237">
+      {/* En-tête — padding latéral 18px (Figma node 963:3238). Desktop : centré. */}
+      <div className="mx-auto flex w-full max-w-[354px] flex-col items-start gap-[8px] px-[18px] md:max-w-[1200px] md:items-center md:px-10 md:text-center">
+        <h2 className="font-landing-display text-[32px] leading-[32px] tracking-[0.0703px] text-[var(--ld-text)] md:text-[48px] md:leading-[48px]">
+          Comment calculons-nous{" "}
+          <span className="text-[#936bff]">l&apos;indice de confiance</span> ?
+        </h2>
+        <p className="max-w-[320px] font-landing-body text-[14px] leading-[20px] tracking-[-0.1504px] text-[var(--ld-text-muted)] md:max-w-[520px] md:text-[16px] md:leading-[24px]">
+          Notre méthodologie repose sur des informations publiques et vérifiables.
+        </p>
+      </div>
 
-      <h2
-        className="font-landing-display font-medium text-[24px] md:text-[36px] mb-10 md:mb-14"
-        style={{ color: "var(--au-text)" }}
-      >
-        Comment ça fonctionne ?
-      </h2>
-
-      <div className="flex flex-col gap-8 md:grid md:grid-cols-2 md:gap-6">
-        <StepCard
-          label="Recherche"
-          bg="#fec530"
-          textColor="#100400"
-          vectorSrc="/landing/vector-recherche.svg"
-          badgeVectorStyle={{ left: "-7.02%", right: "47.05%", top: "calc(50% + 4.49px)", height: "68.36px" }}
-          cardVectorStyle={{ top: "-10px", left: "-20px", width: "140px", height: "140px", opacity: 0.12 }}
-          description="Entrez le nom d'un influenceur, coach ou vendeur en ligne."
-          labelOffsetX="calc(50% - 40px)"
-        />
-        <StepCard
-          label="Collecte"
-          bg="#0cdda5"
-          textColor="#100400"
-          vectorSrc="/landing/vector-collecte.svg"
-          badgeVectorStyle={{ left: "-7.02%", right: "50%", top: "calc(50% + 14.81px)", height: "65px" }}
-          cardVectorStyle={{ top: "-20px", left: "-20px", width: "140px", height: "140px", opacity: 0.12 }}
-          description="Articles, réseaux sociaux, sites d'entreprises, bases publiques, contenus associés."
-          labelOffsetX="calc(50% - 31px)"
-        />
-        <StepCard
-          label="Structuration"
-          bg="#936bff"
-          textColor="#fff3e1"
-          vectorSrc="/landing/vector-structuration.svg"
-          badgeVectorStyle={{ left: "-37.97%", right: "41.37%", top: "calc(50% - 5.46px)", height: "110.127px" }}
-          cardVectorStyle={{ top: "-15px", left: "-25px", width: "150px", height: "150px", opacity: 0.2 }}
-          description="On regroupe ce qui concerne son activité : business, promesses, collaborations, signalements éventuels."
-          labelOffsetX="calc(50% - 48px)"
-        />
-        <StepCard
-          label="Lecture"
-          bg="#f84b5f"
-          textColor="#fff3e1"
-          vectorSrc="/landing/vector-lecture.svg"
-          badgeVectorStyle={{ left: "-10.99%", right: "52.6%", top: "calc(50% + 11.97px)", height: "74.957px" }}
-          cardVectorStyle={{ top: "-10px", left: "-15px", width: "120px", height: "140px", opacity: 0.12 }}
-          description="Vous accédez à une vue structurée des informations disponibles, pour vous faire votre propre avis."
-          labelOffsetX="calc(50% - 28px)"
-        />
+      {/* Bloc surface pleine largeur, padding x24 y48 (Figma node 963:3242). */}
+      <div className="w-full bg-[var(--ld-surface)] px-[24px] py-[48px] md:py-16">
+        {/* Mobile : liste verticale. Desktop : grille 2 colonnes. */}
+        <div className="mx-auto grid w-full max-w-[342px] grid-cols-1 gap-[16px] md:max-w-[1000px] md:grid-cols-2 md:gap-x-12 md:gap-y-10">
+          {CRITERIA.map((c) => (
+            <CriterionRow key={c.title} {...c} />
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
-type StepCardProps = {
-  label: string;
-  bg: string;
-  textColor: string;
-  vectorSrc: string;
-  badgeVectorStyle: React.CSSProperties;
-  cardVectorStyle: React.CSSProperties;
-  description: string;
-  labelOffsetX: string;
-};
-
-function StepCard({ label, bg, textColor, vectorSrc, badgeVectorStyle, cardVectorStyle, description, labelOffsetX }: StepCardProps) {
+function CriterionRow({ icon: Icon, tint, title, body }: Criterion) {
   return (
-    <div className="flex items-start gap-5 md:relative md:flex-col md:gap-5 md:bg-(--au-surface) md:rounded-2xl md:border md:border-(--au-border) md:p-6 md:hover:border-(--au-border-strong) md:overflow-hidden transition-colors">
-
-      {/* Décor en background de la carte — desktop uniquement */}
-      <img
-        alt=""
-        src={vectorSrc}
-        className="hidden md:block absolute pointer-events-none select-none"
-        style={{ ...cardVectorStyle, position: "absolute" }}
-      />
-
-      {/* Badge — même rendu mobile et desktop */}
-      <div className="shrink-0 relative" style={{ width: 114, height: 44 }}>
-        <div
-          className="absolute inset-0 overflow-clip"
-          style={{ backgroundColor: bg, borderRadius: "32px 32px 12px 32px" }}
-        >
-          {/* Décor à l'intérieur du badge — mobile */}
-          <div
-            className="-translate-y-1/2 absolute md:hidden"
-            style={{ ...badgeVectorStyle, position: "absolute" }}
-          >
-            <img alt="" className="absolute block inset-0 max-w-none size-full" src={vectorSrc} />
-          </div>
-        </div>
-        <p
-          className="absolute font-landing-body font-bold leading-normal text-[16px] whitespace-nowrap"
-          style={{ color: textColor, left: labelOffsetX, top: "calc(50% - 11px)" }}
-        >
-          {label}
+    <div className="flex items-start gap-[16px]">
+      {/* Pastille ronde 48×48, fond = teinte @13% (Figma node 963:3245) */}
+      <div
+        className="flex size-[48px] shrink-0 items-center justify-center rounded-full"
+        style={{ backgroundColor: tint + "21", color: tint }}
+      >
+        <Icon className="size-[20px]" />
+      </div>
+      <div className="flex flex-col items-start gap-[8px]">
+        <h3 className="font-landing-body font-medium text-[18px] leading-[27px] tracking-[-0.4395px] text-[var(--ld-text)]">
+          {title}
+        </h3>
+        <p className="font-landing-body text-[14px] leading-[22.75px] tracking-[-0.1504px] text-[var(--ld-text-muted)]">
+          {body}
         </p>
       </div>
-
-      {/* Texte */}
-      <p
-        className="font-landing-body text-[15px] md:text-[16px] leading-relaxed relative"
-        style={{ color: "var(--au-text-muted)" }}
-      >
-        {description}
-      </p>
     </div>
   );
 }

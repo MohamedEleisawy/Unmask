@@ -1,22 +1,26 @@
-const LINKS = ["About", "Help", "Contact"];
+const LINKS = ["À propos", "Aide", "Contact"];
 
+/**
+ * Footer — barre violette reprise de la maquette Figma (node 963:3285).
+ * Liens (Inter 16px, #e1e1e1) puis mention de copyright. Padding x16 y64.
+ */
 export function LandingFooter() {
   return (
-    <footer className="border-t w-full" style={{ background: "var(--au-inset)", borderColor: "var(--au-border)" }}>
-      <div className="max-w-[1200px] mx-auto px-4 md:px-10 py-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <nav className="flex gap-6">
+    <footer className="w-full bg-[#936bff] px-[16px] py-[64px] md:px-10" data-node-id="963:3285">
+      {/* Mobile : pile. Desktop : rangée contenue, liens / copyright aux extrémités. */}
+      <div className="mx-auto flex w-full max-w-[1200px] flex-col items-start gap-[24px] md:flex-row md:items-center md:justify-between md:gap-8">
+        <nav className="flex items-center gap-[24px]">
           {LINKS.map((link) => (
             <a
               key={link}
               href="#"
-              className="font-landing-body text-[16px] font-normal hover:text-[#936bff] transition-colors"
-              style={{ color: "var(--au-text)" }}
+              className="font-['Inter',var(--font-landing-body)] text-[16px] leading-[24px] font-normal text-[#e1e1e1] transition-colors hover:text-white"
             >
               {link}
             </a>
           ))}
         </nav>
-        <p className="font-landing-body text-[14px] font-light" style={{ color: "var(--au-text-faint)" }}>
+        <p className="font-landing-body text-[16px] font-light text-[#dcdcdc]">
           © 2026 Unmask. Tous droits réservés.
         </p>
       </div>

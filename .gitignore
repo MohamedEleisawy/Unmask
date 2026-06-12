@@ -19,6 +19,9 @@ venv/
 .claude/
 .github/skills/
 
+# Impeccable (outillage local : design.json, cache live)
+.impeccable/
+
 # Logs
 *.log
 log.txt
