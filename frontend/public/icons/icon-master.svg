@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-label="Unmask">
+  <!-- Fond plein cadre (#0b0b0b) : OK pour maskable (Android) et iOS (coins arrondis auto) -->
+  <rect width="512" height="512" fill="#0b0b0b"/>
+  <!-- Halo discret -->
+  <circle cx="256" cy="248" r="150" fill="#0cdda5" fill-opacity="0.06"/>
+  <!-- Loupe d'analyse, centrée dans la zone sûre (~96..416) -->
+  <circle cx="232" cy="232" r="96" fill="none" stroke="#0cdda5" stroke-width="30"/>
+  <line x1="300" y1="300" x2="372" y2="372" stroke="#0cdda5" stroke-width="38" stroke-linecap="round"/>
+  <!-- Check de validation à l'intérieur de la loupe -->
+  <path d="M188 234l30 32 62 -70" fill="none" stroke="#0cdda5" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
