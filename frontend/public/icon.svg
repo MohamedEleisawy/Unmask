@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-label="Unmask">
-  <rect width="512" height="512" rx="112" fill="#0b0e0d"/>
-  <rect x="8" y="8" width="496" height="496" rx="104" fill="none" stroke="#0cdda5" stroke-opacity="0.18" stroke-width="2"/>
-  <!-- Lentille d'analyse -->
-  <circle cx="224" cy="224" r="120" fill="none" stroke="#0cdda5" stroke-width="26"/>
-  <line x1="312" y1="312" x2="408" y2="408" stroke="#0cdda5" stroke-width="34" stroke-linecap="round"/>
-  <!-- Check de validation -->
-  <path d="M176 226l34 36 70 -78" fill="none" stroke="#0cdda5" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Fond noir plein cadre : OK maskable (Android) et iOS (coins arrondis auto) -->
+  <rect width="512" height="512" fill="#0b0b0b"/>
+  <!-- Logo Unmask blanc, centré dans la zone sûre (~131..378 / 181..330) -->
+  <g transform="translate(131, 181.5) scale(2.809)">
+    <circle cx="34.1204" cy="36.6072" r="6.5" fill="white"/>
+    <circle cx="71.1204" cy="36.6072" r="6.5" fill="white"/>
+    <path d="M36.9435 52.7599V23.8978C36.9435 17.8945 31.7483 12.8148 25.5141 12.8148C19.2799 12.8148 14.2001 17.8945 14.2001 23.8978V52.7599H0V25.0523C0 11.3139 11.4294 0 25.5141 0C32.0946 0 38.3288 2.53986 43.1777 6.9269L43.9858 7.73503L44.9094 6.9269C49.6428 2.53986 55.877 0 62.4575 0C76.5422 0 88.087 11.3139 88.087 25.0523V52.7599H73.8869V23.8978C73.8869 17.8945 68.8072 12.8148 62.4575 12.8148C56.2233 12.8148 51.1436 17.8945 51.1436 23.8978V52.7599H36.9435Z" fill="white"/>
+  </g>
 </svg>
