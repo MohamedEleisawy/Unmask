@@ -101,8 +101,28 @@
   --ld-text-muted: #5b525a;  /* small print, aides — AA ≥ 5:1 */
   --ld-text-faint: #6a626a;  /* labels discrets, placeholders — AA ≥ 5:1 */
   --ld-border: rgba(37, 20, 29, 0.06);   /* hairline sur surface */
+  --ld-border-solid: #e7e7e7;            /* séparateur plein (carte profil) */
   --ld-footer-link: #e1e1e1; /* liens du footer violet (fixe, sur violet) */
   --ld-footer-copy: #dcdcdc; /* copyright du footer violet (fixe) */
+
+  /* Rapport d'audit (maquette Figma 963:3623/4020) : cartes gris très clair,
+     labels gris moyen, valeurs gris foncé. Theme-aware (cf. dark plus bas). */
+  --ld-surface-alt: #f6f6f6;  /* cartes de section du rapport */
+  --ld-label: #6a6a6a;        /* libellés NOM/STATUT… — AA ≥ 4.5:1 sur surface-alt */
+  --ld-value: #333333;        /* valeurs */
+  --ld-username: #6e4ad6;     /* @handles — violet assombri, AA sur surface-alt */
+  --ld-score: #0a8f6a;        /* score turquoise assombri — AA sur centre clair */
+
+  /* Puces de catégorie (réputation, statut réseau) — texte sur wash 12 %.
+     Hues de la maquette en clair ; éclaircies en dark pour tenir l'AA. */
+  --chip-violet: #5a2ae0;   /* officiel / favorable */
+  --chip-amber: #a23a00;    /* probable / mitigé / enquête */
+  --chip-coral: #c70017;    /* défavorable / condamnation */
+
+  /* Violet de marque assombri, réservé au TEXTE sur fond clair (libellés de
+     boutons outline, mots accentués) — AA ≥ 4.5:1. La bordure/le fill des
+     boutons gardent le violet pur #936bff (composant UI, règle 3:1). */
+  --ld-violet-ink: #6b46d9;
 }
 
 /* Landing — mode sombre (toggle explicite OU préférence système sans override). */
@@ -114,6 +134,16 @@
     --ld-text-muted: #b3a9bd;
     --ld-text-faint: #9d93a8;
     --ld-border: rgba(255, 255, 255, 0.08);
+    --ld-border-solid: #322b3d;
+    --ld-surface-alt: #221c2b;
+    --ld-label: #9d93a8;
+    --ld-value: #e8e2ee;
+    --ld-username: #b9a4ff;     /* @handles lisibles sur surface sombre */
+    --ld-score: #0cdda5;        /* turquoise vif — AA sur centre sombre */
+    --chip-violet: #b9a4ff;
+    --chip-amber: #f5a05a;
+    --chip-coral: #ff8a96;
+    --ld-violet-ink: #b9a4ff;
   }
 }
 
@@ -124,6 +154,16 @@
   --ld-text-muted: #b3a9bd;
   --ld-text-faint: #9d93a8;
   --ld-border: rgba(255, 255, 255, 0.08);
+  --ld-border-solid: #322b3d;
+  --ld-surface-alt: #221c2b;
+  --ld-label: #9d93a8;
+  --ld-value: #e8e2ee;
+  --ld-username: #b9a4ff;
+  --ld-score: #0cdda5;
+  --chip-violet: #b9a4ff;
+  --chip-amber: #f5a05a;
+  --chip-coral: #ff8a96;
+  --ld-violet-ink: #b9a4ff;
 }
 
 @media (prefers-color-scheme: light) {
@@ -174,6 +214,28 @@ html, body {
   color: var(--au-text);
   font-family: var(--font-display);
   font-feature-settings: "ss01", "cv11";
+}
+
+/* ---- Révélation du rapport d'audit ----
+   Entrée séquencée des sections (montée + fondu) au montage de la page de
+   résultat. Le délai par section est piloté par --reveal-delay en ligne.
+   Neutralisé par prefers-reduced-motion (cf. bloc dédié) : contenu visible
+   d'emblée, aucune information gated derrière l'animation. */
+@keyframes ld-reveal-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.ld-reveal {
+  animation: ld-reveal-up var(--animate-duration-reveal, 480ms) var(--ease-out) both;
+  animation-delay: var(--reveal-delay, 0ms);
+}
+/* Le score « monte » : la frange de l'anneau se remplit (cf. composant). */
+@keyframes ld-hero-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.ld-hero-in {
+  animation: ld-hero-in var(--animate-duration-reveal, 480ms) var(--ease-out) both;
 }
 
 /* Subtle ambient grain, fixed and non-interactive (perf-safe) */

@@ -4,6 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { AnalysisProgress } from "@/features/audit/AnalysisProgress";
 import { AuditResults } from "@/features/audit/AuditResults";
+import { ProfileConfirm } from "@/features/audit/ProfileConfirm";
 import { fetchAuditPreview, fetchFullAudit } from "@/features/audit/api";
 import type { AuditPreview, AuditResponse } from "@/features/audit/types";
 import { ThemeToggle } from "@/shared/ThemeToggle";
@@ -88,6 +89,41 @@ function AuditPageInner() {
     }
   };
 
+  // Confirmation de profil — écran plein dédié (maquette Figma node 963:3386),
+  // avec sa propre navbar/footer violets. Les autres phases gardent la coquille
+  // d'audit (nav sombre + barre de progression).
+  if (!error && phase === "confirm" && preview) {
+    return (
+      <ProfileConfirm
+        preview={preview}
+        query={query}
+        onConfirm={runFullAudit}
+        onReject={() => router.replace("/")}
+      />
+    );
+  }
+
+  // Chargement de l'audit — écran plein dédié (maquettes Figma 963:3454/3513),
+  // navbar/footer violets, barre de progression + opt-in notifications. Rendu
+  // hors de la coquille sombre pour ne pas l'envelopper d'une nav --au-*.
+  if (!error && phase === "auditing") {
+    return (
+      <AnalysisProgress
+        query={query}
+        hasWebsite={!!site}
+        finished={!!pendingResults}
+        onReveal={revealResults}
+      />
+    );
+  }
+
+  // Rapport d'audit — écran plein dédié (maquettes Figma 963:3563/3623/4020),
+  // thème clair --ld, navbar/footer violets, anneau de score + sections.
+  // Rendu hors de la coquille sombre (il porte sa propre chrome).
+  if (!error && phase === "done" && results) {
+    return <AuditResults results={results} />;
+  }
+
   return (
     <div className="min-h-[100dvh] flex flex-col" style={{ background: "var(--au-bg)", color: "var(--au-text)" }}>
       {/* Nav minimale : logo + retour */}
@@ -118,23 +154,6 @@ function AuditPageInner() {
       <main className="flex-1 w-full">
         {error && <AuditError message={error} onRetry={() => router.replace(`/audit?q=${encodeURIComponent(query)}`)} />}
         {!error && phase === "searching" && <IdentitySearching query={query} />}
-        {!error && phase === "confirm" && preview && (
-          <IdentityConfirm
-            preview={preview}
-            query={query}
-            onConfirm={runFullAudit}
-            onReject={() => router.replace("/")}
-          />
-        )}
-        {!error && phase === "auditing" && (
-          <AnalysisProgress
-            query={query}
-            hasWebsite={!!site}
-            finished={!!pendingResults}
-            onReveal={revealResults}
-          />
-        )}
-        {!error && phase === "done" && results && <AuditResults results={results} />}
       </main>
 
       {/* Footer */}
@@ -201,101 +220,6 @@ function IdentitySearching({ query }: { query: string }) {
       <p className="text-sm" style={{ color: "var(--au-text-muted)" }}>
         Recherche de l’identité de <span style={{ color: "var(--au-text)", wordBreak: "break-word" }}>@{query.replace(/^@/, "")}</span>…
       </p>
-    </div>
-  );
-}
-
-function IdentityConfirm({
-  preview,
-  query,
-  onConfirm,
-  onReject,
-}: {
-  preview: AuditPreview;
-  query: string;
-  onConfirm: () => void;
-  onReject: () => void;
-}) {
-  const name = query.replace(/^@/, "");
-  // Retire un éventuel suffixe d'homonymie Wikipédia (« Michou (vidéaste) » → « Michou »).
-  const realName = preview.real_name?.replace(/\s*\(.*?\)\s*$/, "").trim() || null;
-  const showRealName = realName && realName.toLowerCase() !== name.toLowerCase();
-
-  return (
-    <div className="max-w-[640px] mx-auto px-4 md:px-8 pt-12 pb-16">
-      <div
-        className="rounded-2xl p-6 flex flex-col gap-5 border"
-        style={{ background: "var(--au-surface)", borderColor: "var(--au-border)" }}
-      >
-        <p className="text-xs uppercase tracking-widest font-medium" style={{ color: "var(--au-text-dim)" }}>
-          Vérification d’identité
-        </p>
-
-        <div className="flex items-center gap-4">
-          {preview.image_url && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={preview.image_url}
-              alt={`Photo de ${realName || name}`}
-              width={64}
-              height={64}
-              loading="lazy"
-              decoding="async"
-              referrerPolicy="no-referrer"
-              className="size-16 rounded-full object-cover shrink-0 border"
-              style={{ borderColor: "var(--au-border-strong)" }}
-              onError={(e) => { e.currentTarget.style.display = "none"; }}
-            />
-          )}
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-xl font-bold truncate" style={{ color: "var(--au-text)" }}>@{name}</span>
-            {showRealName && (
-              <span className="text-sm" style={{ color: "var(--au-text-muted)" }}>Nom réel : {realName}</span>
-            )}
-          </div>
-        </div>
-
-        {preview.networks.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            <span className="text-xs" style={{ color: "var(--au-text-faint)" }}>Réseaux trouvés :</span>
-            <div className="flex flex-wrap gap-2">
-              {preview.networks.map((n) => (
-                <span
-                  key={n.platform}
-                  className="text-xs px-2.5 py-1 rounded-full flex items-center gap-1"
-                  style={{ color: "var(--au-text)", background: "var(--au-border)" }}
-                >
-                  {n.platform}
-                  {n.official && <span style={{ color: "#0cdda5" }}>✓</span>}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm" style={{ color: "var(--au-text-muted)" }}>
-            Peu d’éléments publics trouvés pour ce nom.
-          </p>
-        )}
-
-        <p className="text-sm font-medium" style={{ color: "var(--au-text)" }}>Est-ce bien cette personne ?</p>
-
-        <div className="flex gap-3">
-          <button
-            onClick={onConfirm}
-            className="flex-1 text-sm font-semibold px-4 py-2.5 rounded-xl transition-all active:scale-95"
-            style={{ background: "#0cdda5", color: "#06140f" }}
-          >
-            Oui, lancer l’audit
-          </button>
-          <button
-            onClick={onReject}
-            className="text-sm font-medium px-5 py-2.5 rounded-xl transition-colors"
-            style={{ background: "var(--au-border)", color: "var(--au-text)" }}
-          >
-            Non
-          </button>
-        </div>
-      </div>
     </div>
   );
 }
