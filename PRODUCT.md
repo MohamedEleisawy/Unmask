@@ -25,8 +25,13 @@ Les deux veulent la **même chose** : un verdict factuel et sourcé, vite, sans 
 ## Product Purpose
 
 Unmask est une PWA d'audit de crédibilité qui agrège des **sources publiques vérifiables**
-(SIREN/data.gouv, liste noire AMF/ACPR, signaux YouTube, OSINT, analyse de discours) en un
-score global 0-100 assorti d'un verdict et de preuves cliquables. Zero-storage, conforme RGPD.
+(SIREN/data.gouv, liste noire AMF/ACPR, réputation presse, signaux YouTube, OSINT) en un
+score global 0-100 assorti d'un verdict, d'une timeline et de preuves cliquables.
+Zero-storage, conforme RGPD.
+
+> Modèle de score « risque réel » : seule la **réputation publique** est notée ; les drapeaux
+> réglementaires (AMF/ACPR, condamnations) plafonnent ; SIREN/réseaux/identité sont descriptifs.
+> Référence technique : `backend/app/services/audit_scoring.py` (cf. `README.md` §3).
 
 L'outil ne donne pas un avis : il **montre les faits et leurs sources**. Le succès, c'est
 qu'un utilisateur reparte avec une décision étayée (« vérifié » / « à creuser » / « signaux
@@ -61,7 +66,8 @@ Vulgarise sans infantiliser. La crédibilité passe par la clarté, pas par l'au
 1. **Montrer, pas asséner.** Chaque affirmation porte sa source cliquable. Le design met
    la preuve à portée de clic, pas le jugement en avant.
 2. **Le verdict d'abord, le détail à la demande.** Hiérarchie : score + verdict lisibles en
-   un coup d'œil ; les six piliers et leurs preuves se déplient pour qui veut creuser.
+   un coup d'œil ; les cartes de sources (réputation, identité légale, réseaux, timeline) et
+   leurs preuves se déplient pour qui veut creuser.
 3. **Rassurer par la clarté, pas par l'alarme.** La couleur encode un état (bon / à creuser
    / alerte) avec retenue — toujours doublée d'icône et de texte, jamais la couleur seule.
 4. **Honnêteté sur l'incertitude.** Un audit partiel se dit partiel. L'interface explique

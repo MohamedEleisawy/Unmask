@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Unmask — Frontend
 
-## Getting Started
+Frontend Next.js 16 (App Router, Turbopack, React 19, Tailwind CSS v4, TypeScript strict) de la PWA Unmask. Consomme l'API FastAPI (`backend/`).
 
-First, run the development server:
+> Onboarding complet, architecture et modèle de scoring : voir le [`README.md`](../README.md) racine et [`CLAUDE.md`](../CLAUDE.md).
+
+## Démarrage
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Le backend doit tourner en parallèle (par défaut `http://localhost:8000`). L'URL est lue via `NEXT_PUBLIC_API_URL` (cf. ci-dessous).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Commande | Rôle |
+|---|---|
+| `npm run dev` | Serveur de dev (Turbopack) |
+| `npm run build` | Build de production |
+| `npm run start` | Servir le build |
+| `npm run lint` | ESLint |
+| `npx tsc --noEmit` | Check TypeScript strict |
 
-## Learn More
+## Variable d'environnement
 
-To learn more about Next.js, take a look at the following resources:
+| Variable | Rôle |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | URL du backend, lue au **build** (`shared/config.ts`). Défaut dev `http://localhost:8000`. En prod (Vercel) : la définir dans les *Environment Variables* — un changement exige un **rebuild**. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+app/
+  page.tsx          # "/" — landing marketing
+  audit/page.tsx    # "/audit?q=..." — flux preview → confirm → audit
+  layout.tsx
+features/           # 1 dossier par fonctionnalité (pas d'import croisé)
+  audit/            #   types.ts, api.ts, flux d'audit, pillars/, generatePdf.ts
+  landing/          #   sections de la landing
+  manual-analysis/  #   analyse de texte (hors-score)
+  pwa/              #   ServiceWorkerRegister
+shared/
+  config.ts         # API_BASE_URL — seule source d'URL backend
+  ThemeToggle.tsx
+  ui/               # atomes réutilisés (StatusBadge, ScoreBar, Spinner…)
+public/
+  manifest.json     # PWA (installable, thème, icônes)
+  icons/            # icônes PWA (72 → 512, maskable)
+```
 
-## Deploy on Vercel
+## Conventions front
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Feature-first** : chaque écran majeur = un dossier `features/<feature>/`. Les fetchs vivent uniquement dans `features/*/api.ts`. Aucune URL backend en dur (utiliser `shared/config.ts`).
+- **TypeScript strict** : pas de `any` (`unknown` + narrowing), types explicites sur props et retours d'API.
+- Composants courts (< ~150 lignes JSX). `shared/ui/` réservé aux atomes utilisés par **plusieurs** features.
+- **A11y / thème** : WCAG AA, thème dark (défaut)/light/auto, l'état d'un verdict ne repose jamais sur la couleur seule (icône + texte). Cf. [`PRODUCT.md`](../PRODUCT.md) et [`DESIGN.md`](../DESIGN.md).
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## PWA
+
+Application installable + mode offline via `public/manifest.json` et le service worker (`features/pwa/ServiceWorkerRegister.tsx`). Le `theme_color`/`background_color` du manifest doivent rester cohérents avec les tokens design.
+
+## Déploiement
+
+Cible **Vercel** (racine `frontend/`). Définir `NEXT_PUBLIC_API_URL` = URL du backend (Render) puis déployer. Voir [`README.md`](../README.md) §9.
+</content>

@@ -1,119 +1,201 @@
 # Unmask
 
-PWA d'audit de crédibilité factuel pour influenceurs et marques. Trois critères pondérés vérifiés via des sources publiques officielles (data.gouv.fr, AMF/ACPR, YouTube Data API, Anthropic). Zéro stockage de données personnelles — conforme RGPD.
+**PWA d'audit de crédibilité factuel** pour influenceurs, entrepreneurs et marques. Unmask agrège des **sources publiques officielles et vérifiables** (data.gouv.fr, AMF/ACPR, presse via Claude + web_search, YouTube, RDAP) pour produire un **score 0-100**, un **verdict**, une **timeline** et des **preuves cliquables**. Aucune donnée personnelle stockée — traitement en mémoire vive, conforme RGPD.
 
-## Stack
+> **Pas de verdict définitif.** Unmask montre les faits et leurs sources ; il ne dit pas qui croire. Chaque affirmation porte une source publique vérifiable (« No proof, no point »).
 
-- **Backend** : Python 3.11+, FastAPI, httpx async
-- **Frontend** : Next.js 16 (App Router), React 19, Tailwind CSS v4, TypeScript
+---
 
-## Les 3 critères
+## 1. Présentation & objectifs
 
-| # | Critère | Poids | Source |
-|---|---|---|---|
-| 1 | Identité légale vérifiable (SIREN actif, statut juridique) | 40 pts | Annuaire des Entreprises — `recherche-entreprises.api.gouv.fr` |
-| 2 | Conformité AMF/ACPR (absence de la liste noire) | 35 pts | data.gouv.fr — dataset `d2d9df6d-1cd2-41a8-96f5-684cb3057ecb` |
-| 3 | Analyse de discours & signaux publics | 25 pts | Anthropic Claude + YouTube Data API + Serper/Google CSE (OSINT) |
+Deux publics partagent le même outil (`/audit`) :
 
-Le critère 3 est une moyenne interne de 3 sous-signaux (discours LLM, cohérence YouTube, réputation OSINT). Les poids des critères absents sont redistribués proportionnellement sur les critères présents — un input partiel donne un score partiel signalé dans l'UI.
+- **Particuliers prudents** — « Cet influenceur est-il légitime, ou vais-je me faire avoir avant d'acheter sa formation ? »
+- **Marques & agences** — due diligence légère avant un partenariat (identité légale, AMF/ACPR, réputation).
 
-Les anciens piliers `partnerships` (loi 2023) restent accessibles via `/audit/manual` et la feature `manual-analysis` du front, mais ne pèsent plus dans le score global.
+Une **landing marketing** (`/`) sert de porte d'entrée. Détails produit/marque dans [`PRODUCT.md`](PRODUCT.md) et [`DESIGN.md`](DESIGN.md).
 
-## Prérequis
+## 2. Stack technique
 
-- Python 3.11+
-- Node.js 20+ (npm)
-- Clés API listées dans `backend/.env.example` (toutes optionnelles — chaque sous-signal se désactive proprement si sa clé manque)
+| Couche | Techno | Version |
+|---|---|---|
+| Backend | Python + FastAPI + httpx (async) | Python **3.11+**, FastAPI ≥ 0.115 |
+| IA | Anthropic Claude (`claude-haiku-4-5`) + outil serveur `web_search` | anthropic ≥ 0.105 |
+| Frontend | Next.js (App Router, Turbopack) + React + Tailwind CSS v4 + TypeScript | Next **16.2.6**, React **19**, Node **20+** |
+| PDF | jspdf (génération du rapport téléchargeable, côté client) | jspdf 4 |
+| Déploiement (cible) | Backend → Render ; Frontend → Vercel | — |
 
-## Installation
+## 3. Modèle de scoring — « risque réel » (⚠️ lire avant de toucher au score)
 
-### Backend
+> **Important :** le modèle a évolué. L'ancien barème « 3 critères pondérés 40/35/25 » **n'existe plus**. Toute doc ou commentaire mentionnant des poids 40/35/25 est obsolète. La référence fait foi : [`backend/app/services/audit_scoring.py`](backend/app/services/audit_scoring.py).
+
+Le principe : **on ne note QUE ce qui qualifie la fiabilité réelle d'une entité.** La notoriété (SIREN actif, présence sociale, identité numérique) ne dit rien sur l'honnêteté — un escroc qui réussit est souvent *plus* visible. Ces signaux sont donc **affichés** (cartes, timeline) mais **ne pèsent pas** dans le score.
+
+| Élément | Rôle dans le score |
+|---|---|
+| **Réputation publique** (presse, plaintes, enquêtes, condamnations) | **Seul axe noté** — 0 à 100 |
+| Liste noire **AMF/ACPR** | Drapeau **critique** → plafonne le score à **20** + verdict « alerte » |
+| **Condamnation judiciaire** avérée | Drapeau **critique** → plafonne à **20** |
+| ≥ 2 sociétés **radiées/fermées** (même dirigeant) | **Warning** → plafonne à **50** (interdit le vert) |
+| SIREN, statut juridique, réseaux sociaux, Wikipédia | **Descriptifs uniquement**, hors score |
+| Âge du domaine (RDAP) | **Informatif** — ajouté *après* le calcul, n'affecte ni score ni verdict |
+
+Cas « inconnu » : si la réputation n'est pas évaluable (empreinte publique trop mince ou analyse indisponible), le score n'est **pas** 100 mais **50 (neutre, « à vérifier »)** — « on n'a rien trouvé » n'est pas « vérifié ».
+
+**Verdicts :** `verifie` (≥ 70) · `partiellement_verifie` (≥ 40) · `peu_verifiable` (< 40) · `alerte` (forcé par tout drapeau critique).
+
+## 4. Architecture & organisation des dossiers
+
+```
+backend/app/
+  main.py            # Bootstrap FastAPI, CORS, montage des routers, /health
+  config.py          # Lecture des variables d'environnement (clés API, CORS, TTL)
+  api/               # Routers FastAPI — 1 fichier par endpoint. AUCUNE logique métier.
+    full_audit.py    #   Orchestrateur : POST /audit/preview et /audit/full
+    legal_identity.py compliance.py discourse.py youtube.py osint.py
+    partnerships.py  social_presence.py
+  services/          # Logique métier — <service>_checker.py + <service>_models.py
+    reputation_analyzer.py   # Réputation presse (Claude + web_search) — AXE NOTÉ
+    audit_scoring.py         # Score, caps réglementaires, alertes, verdict, coverage
+    audit_report.py          # build_audit_trail + build_timeline
+    siren_checker.py         # Identité légale (Annuaire des Entreprises)
+    amf_checker.py           # Liste noire AMF/ACPR (CSV data.gouv, cache 6h)
+    domain_intelligence.py   # Âge du domaine via RDAP (informatif)
+    handle_resolver.py       # Résolution d'identité (Wikipédia/Wikidata)
+    social_presence_checker.py  # Profils sociaux (Google site:)
+    youtube_checker.py  osint_checker.py  discourse_analyzer.py
+    name_corrector.py  reputation_analyzer.py  _search_backend.py (Serper/CSE partagé)
+
+frontend/
+  app/               # Next.js App Router
+    page.tsx         #   "/" — landing marketing
+    audit/page.tsx   #   "/audit?q=..." — flux d'audit en 2 étapes
+    layout.tsx
+  features/          # Code par fonctionnalité (jamais d'import croisé entre features)
+    audit/           #   Formulaire, flux preview→confirm→audit, résultats, pillars/, PDF
+    landing/         #   Sections de la landing (Hero, FeaturesGrid, HowItWorks, CTA…)
+    manual-analysis/ #   Analyse de texte manuel (discours/partenariats, hors-score)
+    pwa/             #   ServiceWorkerRegister
+  shared/            # config.ts (API_BASE_URL), ThemeToggle, ui/ (atomes réutilisés)
+  public/            # manifest.json (PWA), icons/, service worker
+```
+
+Patterns détaillés dans [`docs/claude/architecture.md`](docs/claude/architecture.md).
+
+## 5. Prérequis
+
+- **Python 3.11+**
+- **Node.js 20+** (npm)
+- **Clés API** (voir §7) — toutes optionnelles : chaque sous-signal se désactive proprement (`available: false`) si sa clé manque. Les critères data.gouv (SIREN, AMF/ACPR) fonctionnent **sans clé**.
+- Aucune base de données (zero-storage par conception).
+
+## 6. Installation & lancement
+
+### Backend (`http://localhost:8000`)
 
 ```powershell
 cd backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1      # PowerShell (Windows)
-# .venv\Scripts\activate        # cmd.exe (Windows)
 # source .venv/bin/activate     # macOS/Linux
 pip install -r requirements.txt
-copy .env.example .env          # puis remplir les clés API
+copy .env.example .env          # puis renseigner les clés API
+python -m uvicorn app.main:app --reload
 ```
 
-### Frontend
+Docs OpenAPI : `http://localhost:8000/docs` · Santé : `http://localhost:8000/health` (renvoie les clés *chargées*, sous forme de booléens).
+
+### Frontend (`http://localhost:3000`)
 
 ```bash
 cd frontend
 npm install
-```
-
-### Données AMF
-
-Aucune action manuelle requise : le service `amf_checker` télécharge le CSV officiel depuis data.gouv.fr (URL stable, cache mémoire 6h) au premier appel. Un fichier `backend/data/abeis-liste-noire.csv` peut être présent comme fallback hors-ligne.
-
-## Lancement (dev)
-
-Deux terminaux en parallèle :
-
-```bash
-# Terminal 1 — backend (http://localhost:8000)
-cd backend
-python -m uvicorn app.main:app --reload
-
-# Terminal 2 — frontend (http://localhost:3000)
-cd frontend
 npm run dev
 ```
 
-Docs API auto-générées : http://localhost:8000/docs
+> Les deux services tournent en parallèle dans **deux terminaux**. Le front lit le backend via `NEXT_PUBLIC_API_URL` (défaut `http://localhost:8000`).
 
-## Variables d'environnement
+### Données AMF — aucune action manuelle
 
-Toutes dans `backend/.env` (voir `.env.example`) :
+Le service `amf_checker` télécharge le CSV officiel depuis data.gouv.fr (cache mémoire 6h, TTL configurable) au premier appel. Un fichier `backend/data/abeis-liste-noire.csv` peut servir de fallback hors-ligne. **Le dossier `backend/data/` est gitignoré.**
 
-| Variable | Sous-signal du critère 3 | Obtenir |
+## 7. Variables d'environnement
+
+### Backend — `backend/.env` (voir [`backend/.env.example`](backend/.env.example))
+
+| Variable | Rôle | Sans elle |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | Analyse de discours | [console.anthropic.com](https://console.anthropic.com) |
-| `YOUTUBE_API_KEY` | Cohérence YouTube | [console.cloud.google.com](https://console.cloud.google.com) (activer YouTube Data API v3) |
-| `SERPER_API_KEY` *ou* `GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_ID` | Réputation OSINT | [serper.dev](https://serper.dev) (recommandé, 2500 req/mois gratuits) |
+| `ANTHROPIC_API_KEY` | **Réputation presse** (Claude + web_search) — l'axe noté | Score retombe au neutre (50) ; fallback OSINT Serper |
+| `YOUTUBE_API_KEY` | Cohérence d'engagement YouTube (descriptif) | Carte YouTube indisponible |
+| `SERPER_API_KEY` | Recherche Google (OSINT + présence sociale). Gratuit 2500 req/mois ([serper.dev](https://serper.dev)) | Réseaux sociaux/OSINT indisponibles |
+| `GOOGLE_CSE_API_KEY` + `GOOGLE_CSE_ID` | Alternative à Serper (Google Custom Search) | — |
+| `ALLOWED_ORIGINS` | Origines CORS (CSV). Dev : `*`. **Prod : URL front exacte, jamais `*`** | Défaut `*` |
+| `AMF_CACHE_TTL_SECONDS` | TTL du cache liste noire AMF (défaut `21600` = 6h) | 6h |
 
-Les critères 1 et 2 fonctionnent sans clé (API data.gouv.fr publique).
+### Frontend — variable de build (Vercel)
 
-## Structure
+| Variable | Rôle |
+|---|---|
+| `NEXT_PUBLIC_API_URL` | URL publique du backend. Lue au **build** (`shared/config.ts`). Défaut dev : `http://localhost:8000`. En prod : URL Render du backend. |
 
-```
-backend/app/
-  api/         # Routers FastAPI (1 fichier par sous-service)
-  services/    # Logique métier : <service>_models.py + <service>_checker.py
-               # audit_scoring.py pondère les 3 critères
-
-frontend/
-  app/         # Next.js App Router (page, layout, globals.css)
-  features/    # Code par feature (audit/, manual-analysis/)
-  shared/ui/   # Atomes réutilisables (StatusBadge, ScoreBar, icons…)
-```
-
-Détails dans [`docs/claude/architecture.md`](docs/claude/architecture.md).
-
-## Commandes utiles
+## 8. Commandes utiles
 
 ```bash
-# Backend
-python -m uvicorn app.main:app --reload   # dev avec hot-reload
-python -m compileall app                  # check syntaxe
+# Backend (depuis backend/)
+python -m uvicorn app.main:app --reload    # dev avec hot-reload
+python -m compileall app                    # check syntaxe rapide
 
-# Frontend
-npm run dev                               # dev (http://localhost:3000)
-npm run build                             # build production
-npm run lint                              # ESLint
-npx tsc --noEmit                          # check TypeScript
+# Frontend (depuis frontend/)
+npm run dev                                 # dev
+npm run build                               # build production
+npm run start                               # servir le build
+npm run lint                                # ESLint
+npx tsc --noEmit                            # check TypeScript strict
 ```
 
-## Conventions
+> **Tests :** aucune suite de tests automatisés n'est encore présente (cf. §11). `python -m compileall` et `tsc --noEmit` sont les garde-fous actuels.
 
-Commits en français, format type `feat:` / `fix:` / `refactor:` / `chore:` / `docs:`. Une responsabilité par commit. Ne jamais pusher sans accord, ne jamais commiter `.env`.
+## 9. Déploiement
 
-Détails dans [`docs/claude/conventions.md`](docs/claude/conventions.md) et [`CLAUDE.md`](CLAUDE.md).
+**Cible :** Backend sur **Render**, Frontend sur **Vercel** (aucun fichier `render.yaml`/`vercel.json` versionné — configuration faite dans les dashboards).
 
-## Engagement
+- **Backend (Render)** : Web Service Python. Start command type `uvicorn app.main:app --host 0.0.0.0 --port $PORT`. Renseigner toutes les clés API + `ALLOWED_ORIGINS=<url-vercel-front>`. Render ping `/` (géré, pas de 404). Diagnostic post-deploy via `/health`.
+- **Frontend (Vercel)** : projet Next.js, racine `frontend/`. Définir `NEXT_PUBLIC_API_URL=<url-render-backend>` dans *Environment Variables*. La PWA (`manifest.json` + service worker) est servie statiquement.
 
-Aucun verdict définitif n'est émis. Toutes les sources sont publiques et traçables. Aucune donnée personnelle stockée — traitement en mémoire vive uniquement.
+> **À compléter :** procédure CI/CD si elle existe, domaines de prod réels, configuration exacte du service worker (offline). Non déductibles du dépôt à ce jour.
+
+## 10. Dépendances importantes & justification
+
+**Backend** — `fastapi`/`uvicorn` (API async), `httpx` (client HTTP async, timeouts explicites), `pydantic` (validation à chaque frontière), `anthropic` (réputation presse via `web_search` — son absence faisait échouer *silencieusement* le pilier réputation en prod, d'où sa présence en dépendance ferme), `python-dotenv` (chargement `.env` en local, no-op en prod).
+
+**Frontend** — `next`/`react` (App Router, RSC, Turbopack), `tailwindcss` v4 (styles + tokens design), `jspdf` (rapport PDF généré côté client, cohérent avec le zero-storage).
+
+## 11. Points d'attention, limitations & dette technique
+
+- **Doc historiquement désynchronisée du score** : tout texte mentionnant « 6 piliers » ou « poids 40/35/25 » est périmé — `audit_scoring.py` fait foi (§3).
+- **Aucun test automatisé** : pas de pytest/jest. Vérification manuelle + `compileall`/`tsc`. → améliorer.
+- **Quotas API externes** : YouTube 10 000 unités/jour, Serper 2 500 req/mois, coût Anthropic (`_MAX_SEARCHES = 5` web_search/audit). Pas de rate-limiting applicatif ni de cache au-delà du CSV AMF. → ajouter un cache TTL avant tout nouvel appel coûteux.
+- **CORS** : `*` par défaut, à restreindre impérativement en prod.
+- **Routes individuelles legacy** (`/audit/discourse`, `/audit/osint`, `/audit/partnerships`…) : restent exposées et servent la feature `manual-analysis`, mais ne pèsent pas dans `/audit/full`.
+- **Déploiement non versionné** : config Render/Vercel hors dépôt (cf. §9 « À compléter »).
+
+## 12. Maintenance & dépannage courant
+
+| Symptôme | Piste |
+|---|---|
+| Réputation toujours « indisponible » / score bloqué à 50 | `ANTHROPIC_API_KEY` absente ou invalide → vérifier `/health` |
+| Réseaux sociaux / OSINT vides | Ni `SERPER_API_KEY` ni couple CSE configurés → logs de démarrage |
+| Erreur CORS dans le navigateur | `ALLOWED_ORIGINS` ne contient pas l'URL du front |
+| Front appelle `localhost:8000` en prod | `NEXT_PUBLIC_API_URL` non défini **au moment du build** Vercel |
+| AMF retourne vide | data.gouv injoignable → fallback `backend/data/abeis-liste-noire.csv` ; vérifier le cache (TTL) |
+| Diagnostic général déploiement | Ouvrir `/health` : `keys` liste les clés chargées (booléens, jamais les valeurs) |
+
+Au démarrage, le backend logue quelles clés sont chargées et l'origine CORS active. Les logs `httpx`/`httpcore` sont remontés à `WARNING` pour **ne jamais écrire de secret** (clé en query string) dans les logs.
+
+## 13. Conventions
+
+Commits **en français**, Conventional Commits (`feat:` / `fix:` / `refactor:` / `chore:` / `docs:`), une responsabilité par commit, impératif présent sans point final. **Ne jamais pusher sans accord, ne jamais commiter `.env`, jamais `--force` sur `main`.** Toute route d'audit retourne un champ `disclaimer`.
+
+Détails : [`docs/claude/conventions.md`](docs/claude/conventions.md), [`docs/claude/code-quality.md`](docs/claude/code-quality.md), [`docs/claude/security.md`](docs/claude/security.md), [`CLAUDE.md`](CLAUDE.md).
+</content>
+</invoke>

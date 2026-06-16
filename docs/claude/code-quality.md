@@ -11,8 +11,8 @@
 - Ne jamais dupliquer la logique métier d'un pilier.
 
 ## SOLID
-- **S** — Un service = un pilier. Pas de checker qui appelle deux API non liées.
-- **O** — Ajouter un pilier ne doit pas modifier les autres, juste ajouter un router + un service.
+- **S** — Un service = une source. Pas de checker qui appelle deux API non liées.
+- **O** — Ajouter une source ne doit pas modifier les autres, juste ajouter un router + un service. Un nouvel axe noté passe par `audit_scoring.py` (cf. architecture).
 - **D** — Les services dépendent d'abstractions (`httpx.AsyncClient` injecté) plutôt que d'instances globales, pour faciliter les tests futurs.
 
 ## Clean Code (Python)

@@ -4,7 +4,7 @@
 
 - **Langue : français.**
 - Format type Conventional Commits :
-  - `feat: ajoute le pilier 6 AMF`
+  - `feat: ajoute le signal âge de domaine (RDAP)`
   - `fix: corrige le parsing SIREN à 9 chiffres`
   - `chore: met à jour les dépendances backend`
   - `refactor: extrait le client httpx partagé`

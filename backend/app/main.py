@@ -30,7 +30,11 @@ logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 app = FastAPI(
     title="Unmask API",
-    description="API d'audit de crédibilité pour influenceurs et marques. 6 piliers factuels.",
+    description=(
+        "API d'audit de crédibilité pour influenceurs et marques. "
+        "Modèle « risque réel » : réputation publique notée, drapeaux réglementaires "
+        "(AMF/ACPR, condamnations) qui plafonnent ; SIREN/réseaux/identité descriptifs."
+    ),
     version="2.0.0",
 )
 
@@ -56,28 +60,28 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Pilier 1 — Identité légale (data.gouv.fr)
+# Identité légale (data.gouv.fr) — descriptif + radiations (drapeau)
 app.include_router(legal_identity_router)
 
-# Pilier 2 — Transparence partenariats (loi 2023)
+# Transparence partenariats (loi 2023) — analyse manuelle, hors score
 app.include_router(partnerships_router)
 
-# Pilier 3 — Analyse du discours (Claude API)
+# Analyse du discours (Claude API) — analyse manuelle, hors score
 app.include_router(discourse_router)
 
-# Pilier 4 — Cohérence engagement (YouTube Data API)
+# Cohérence engagement (YouTube Data API) — descriptif
 app.include_router(youtube_router)
 
-# Pilier 5 — Réputation externe OSINT
+# Réputation externe OSINT (Serper/CSE) — descriptif/fallback
 app.include_router(osint_router)
 
-# Pilier 6 — Conformité institutionnelle (AMF/ACPR)
+# Conformité institutionnelle (AMF/ACPR) — drapeau critique (cap 20)
 app.include_router(compliance_router)
 
-# Présence sociale (Google site:) — informationnel, hors score
+# Présence sociale (Google site:) — descriptif, hors score
 app.include_router(social_presence_router)
 
-# Orchestrateur — Audit complet (3 critères pondérés)
+# Orchestrateur — Audit complet (réputation notée + drapeaux réglementaires)
 app.include_router(full_audit_router)
 
 
