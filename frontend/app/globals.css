@@ -229,6 +229,26 @@ html, body {
   animation: ld-reveal-up var(--animate-duration-reveal, 480ms) var(--ease-out) both;
   animation-delay: var(--reveal-delay, 0ms);
 }
+/* ---- Révélation au défilement (landing) ----
+   Les sections de la landing entrent au scroll : fondu + montée de 12px.
+   L'état est piloté par data-revealed (posé par le composant Reveal via
+   IntersectionObserver) ; la transition tourne hors thread principal et ne
+   joue qu'une fois. Le délai de stagger passe par --reveal-delay en ligne.
+   Neutralisé par prefers-reduced-motion (le contenu reste visible : l'état
+   « caché » n'est appliqué que lorsque le JS a confirmé l'observation). */
+.ld-scroll-reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity var(--animate-duration-reveal, 480ms) var(--ease-out),
+    transform var(--animate-duration-reveal, 480ms) var(--ease-out);
+  transition-delay: var(--reveal-delay, 0ms);
+  will-change: opacity, transform;
+}
+.ld-scroll-reveal[data-revealed="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
 /* Le score « monte » : la frange de l'anneau se remplit (cf. composant). */
 @keyframes ld-hero-in {
   from { opacity: 0; transform: scale(0.96); }
@@ -236,6 +256,29 @@ html, body {
 }
 .ld-hero-in {
   animation: ld-hero-in var(--animate-duration-reveal, 480ms) var(--ease-out) both;
+}
+
+/* ---- Repli/dépli de détail (lignes de score, preuves) ----
+   Anime l'ouverture des détails sans saut de hauteur, via la grille
+   0fr→1fr (le contenu reste dans le DOM : lisible par les lecteurs d'écran
+   même replié, masqué de l'arbre via aria/overflow). Le contenu fait un léger
+   fondu pour adoucir la bascule. Neutralisé par prefers-reduced-motion. */
+.ld-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--animate-duration-state, 220ms) var(--ease-out);
+}
+.ld-collapse[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.ld-collapse > .ld-collapse-inner {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transition: opacity var(--animate-duration-state, 220ms) var(--ease-out);
+}
+.ld-collapse[data-open="true"] > .ld-collapse-inner {
+  opacity: 1;
 }
 
 /* Subtle ambient grain, fixed and non-interactive (perf-safe) */
@@ -315,5 +358,16 @@ select:focus-visible {
      arbitraire : on les fige à pleine opacité, lisibles comme un état. */
   .animate-spin {
     animation: none !important;
+  }
+  /* Pas de montée au scroll : le contenu est visible d'emblée, sans décalage. */
+  .ld-scroll-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  /* Repli/dépli : on garde l'ouverture/fermeture mais sans animer la hauteur
+     (la transition grille devient instantanée via la règle globale ci-dessus) ;
+     le contenu ouvert reste pleinement opaque. */
+  .ld-collapse[data-open="true"] > .ld-collapse-inner {
+    opacity: 1 !important;
   }
 }

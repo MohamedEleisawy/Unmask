@@ -138,26 +138,6 @@ export function AnalysisProgress({ query, hasWebsite, finished, onReveal }: Prop
           </p>
         )}
       </main>
-
-      {/* Footer violet (Figma node 963:3493) */}
-      <footer className="w-full bg-[#936bff] px-[16px] py-[64px] md:px-10">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-col items-start gap-[24px]">
-          <nav className="flex items-center gap-[24px]">
-            {["À propos", "Aide", "Contact"].map((l) => (
-              <a
-                key={l}
-                href="#"
-                className="font-['Inter',var(--font-landing-body)] text-[16px] leading-[24px] text-[#eee] transition-colors hover:text-white"
-              >
-                {l}
-              </a>
-            ))}
-          </nav>
-          <p className="font-landing-body text-[16px] font-light text-[#eee]">
-            © 2026 Unmask. Tous droits réservés.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
@@ -231,7 +211,7 @@ function NotifyCard({ onAccept, onDecline }: { onAccept: () => void; onDecline: 
         <button
           type="button"
           onClick={onAccept}
-          className="flex h-[38px] flex-1 items-center justify-center rounded-[12px] bg-[#936bff] px-[12px] py-[8px] font-landing-body text-[16px] font-bold text-[#eee] transition-all hover:bg-[#7d54f0] active:-translate-y-px active:scale-[0.98]"
+          className="flex h-[38px] flex-1 items-center justify-center rounded-[12px] bg-[#936bff] px-[12px] py-[8px] font-landing-body text-[16px] font-bold text-[#eee] transition-[background-color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[#7d54f0] active:-translate-y-px active:scale-[0.98]"
         >
           Accepter
         </button>

@@ -240,7 +240,7 @@ export function AuditResults({ results }: Props) {
               </SectionCard>
             )}
 
-            {/* Conformité AMF/ACPR — conservé, restylé (hors maquette visuelle). */}
+            {/* Conformité AMF — conservé, restylé (hors maquette visuelle). */}
             <SectionCard title="Conformité" icon={<ShieldIcon />} style={reveal()}>
               <BlacklistCard data={complianceData} />
             </SectionCard>
@@ -362,7 +362,7 @@ function ScoreResultCard({
         type="button"
         onClick={onDownload}
         disabled={pdfBusy}
-        className="flex h-[44px] items-center justify-center gap-[8px] rounded-[12px] bg-[#936bff] px-[12px] font-landing-body text-[16px] font-bold text-[#eee] transition-all hover:bg-[#7d54f0] active:scale-[0.98] disabled:opacity-50"
+        className="flex h-[44px] items-center justify-center gap-[8px] rounded-[12px] bg-[#936bff] px-[12px] font-landing-body text-[16px] font-bold text-[#eee] transition-[background-color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[#7d54f0] active:scale-[0.98] disabled:opacity-50"
       >
         <DownloadIcon />
         {pdfBusy ? "Génération…" : "Télécharger l'audit"}
@@ -755,18 +755,20 @@ function BreakdownRow({ row, color, last }: { row: ScoreBreakdownRow; color: str
           </button>
         )}
       </div>
-      {open && (
-        <div className="flex flex-col gap-1 pl-0.5">
-          <p className="font-landing-body text-[12px] leading-snug text-[var(--ld-text-muted)]">{row.reason}</p>
-          {row.details && row.details.length > 0 && (
-            <ul className="flex flex-wrap gap-x-2 gap-y-0.5">
-              {row.details.map((d, i) => (
-                <li key={i} className="font-landing-body text-[11px] text-[var(--ld-text-faint)]">{d}</li>
-              ))}
-            </ul>
-          )}
+      <div className="ld-collapse" data-open={open} aria-hidden={!open}>
+        <div className="ld-collapse-inner">
+          <div className="flex flex-col gap-1 pl-0.5 pt-1">
+            <p className="font-landing-body text-[12px] leading-snug text-[var(--ld-text-muted)]">{row.reason}</p>
+            {row.details && row.details.length > 0 && (
+              <ul className="flex flex-wrap gap-x-2 gap-y-0.5">
+                {row.details.map((d, i) => (
+                  <li key={i} className="font-landing-body text-[11px] text-[var(--ld-text-faint)]">{d}</li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
