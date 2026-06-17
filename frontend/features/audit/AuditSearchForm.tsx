@@ -6,7 +6,7 @@ import type { AuditResponse } from "./types";
 
 const PILLARS = [
   { num: "01", label: "Identité légale vérifiable" },
-  { num: "02", label: "Conformité AMF / ACPR" },
+  { num: "02", label: "Conformité AMF" },
   { num: "03", label: "Réputation publique & OSINT" },
   { num: "04", label: "Présence en ligne" },
   { num: "05", label: "Transparence des partenariats" },

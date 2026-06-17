@@ -33,7 +33,7 @@ app = FastAPI(
     description=(
         "API d'audit de crédibilité pour influenceurs et marques. "
         "Modèle « risque réel » : réputation publique notée, drapeaux réglementaires "
-        "(AMF/ACPR, condamnations) qui plafonnent ; SIREN/réseaux/identité descriptifs."
+        "(AMF, condamnations) qui plafonnent ; SIREN/réseaux/identité descriptifs."
     ),
     version="2.0.0",
 )
@@ -75,7 +75,7 @@ app.include_router(youtube_router)
 # Réputation externe OSINT (Serper/CSE) — descriptif/fallback
 app.include_router(osint_router)
 
-# Conformité institutionnelle (AMF/ACPR) — drapeau critique (cap 20)
+# Conformité institutionnelle (AMF) — drapeau critique (cap 20)
 app.include_router(compliance_router)
 
 # Présence sociale (Google site:) — descriptif, hors score

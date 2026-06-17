@@ -50,7 +50,7 @@ export default function MentionsLegalesPage() {
           <LegalSection title="Objet du service">
             <p>
               Unmask est un outil d&apos;audit de crédibilité qui agrège des sources
-              publiques vérifiables (registres officiels, listes noires AMF/ACPR,
+              publiques vérifiables (registres officiels, liste noire AMF,
               réputation presse, signaux issus des plateformes publiques) afin de
               produire un indice de confiance accompagné de ses preuves.
             </p>

@@ -18,7 +18,7 @@ L'audit repose sur 6 piliers factuels :
 3. Analyse du discours : Détection de signaux de manipulation ou secteurs interdits.
 4. Cohérence d'engagement : Analyse des métriques réelles (ratio vues/abonnés).
 5. Réputation externe (OSINT) : Croisement avec les avis et la presse.
-6. Conformité Institutionnelle : Vérification systématique contre les listes noires AMF/ACPR.
+6. Conformité Institutionnelle : Vérification systématique contre les listes noires AMF.
 
 ## 4. Stack Technique
 - **Frontend :** Next.js (App Router), Tailwind CSS, PWA.

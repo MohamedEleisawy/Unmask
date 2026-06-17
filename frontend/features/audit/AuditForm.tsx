@@ -71,7 +71,7 @@ export function AuditForm({ onResults, onReset }: Props) {
             className="num w-full bg-transparent border-b border-[var(--color-line)] focus:border-[var(--color-fg-subtle)] py-2 text-sm text-[var(--color-fg)] placeholder:text-[var(--color-fg-faint)] focus:outline-none transition-colors"
           />
         </UnderlineField>
-        <UnderlineField label="Secteur déclaré (ajuste la vérification AMF/ACPR)">
+        <UnderlineField label="Secteur déclaré (ajuste la vérification AMF)">
           <select
             value={sector}
             onChange={(e) => setSector(e.target.value)}

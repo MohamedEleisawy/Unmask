@@ -9,7 +9,7 @@ Principe : **on ne note QUE ce qui qualifie la fiabilité réelle.** La notorié
 | Élément | Service backend | Rôle |
 |---|---|---|
 | **Réputation publique** | `reputation_analyzer` (Claude `claude-haiku-4-5` + `web_search`) | **Seul axe noté** (0-100) |
-| Liste noire AMF/ACPR | `amf_checker` | Drapeau **critique** → cap **20** + verdict `alerte` |
+| Liste noire AMF | `amf_checker` | Drapeau **critique** → cap **20** + verdict `alerte` |
 | Condamnation judiciaire | (déduit de `reputation.event_breakdown`) | Drapeau **critique** → cap **20** |
 | ≥ 2 sociétés radiées | `siren_checker` | **Warning** → cap **50** (interdit le vert) |
 | Identité légale, réseaux, Wikipédia, YouTube | `siren_checker`, `social_presence_checker`, `handle_resolver`, `youtube_checker` | **Descriptifs**, hors score |
@@ -28,7 +28,7 @@ backend/app/
 ├── api/                 # Routers — 1 fichier par endpoint. AUCUNE logique métier.
 │   ├── full_audit.py        # Orchestrateur : POST /audit/preview et /audit/full
 │   ├── legal_identity.py    # POST /audit/legal-identity (SIREN, data.gouv)
-│   ├── compliance.py        # POST /audit/compliance (AMF/ACPR)
+│   ├── compliance.py        # POST /audit/compliance (AMF)
 │   ├── discourse.py         # POST /audit/discourse (analyse de texte — manual)
 │   ├── youtube.py           # POST /audit/youtube
 │   ├── osint.py             # POST /audit/osint
@@ -39,7 +39,7 @@ backend/app/
     ├── audit_scoring.py         # Score, caps, alertes, verdict, coverage
     ├── audit_report.py          # build_audit_trail + build_timeline
     ├── siren_checker.py         # Identité légale + radiations
-    ├── amf_checker.py           # Liste noire AMF/ACPR (CSV, cache TTL)
+    ├── amf_checker.py           # Liste noire AMF (CSV, cache TTL)
     ├── domain_intelligence.py   # Âge domaine (RDAP) — informatif
     ├── handle_resolver.py       # Résolution identité (Wikipédia/Wikidata)
     ├── social_presence_checker.py  # Profils sociaux (Google site:)
@@ -100,7 +100,7 @@ frontend/
 ## Sources de données
 
 - **SIREN / statut juridique / radiations** : Annuaire des Entreprises `recherche-entreprises.api.gouv.fr` (publique, sans clé)
-- **Liste noire AMF/ACPR** : CSV data.gouv (dataset `d2d9df6d-1cd2-41a8-96f5-684cb3057ecb`, cache TTL `AMF_CACHE_TTL_SECONDS`, fallback `backend/data/abeis-liste-noire.csv`)
+- **Liste noire AMF** : CSV data.gouv (dataset `d2d9df6d-1cd2-41a8-96f5-684cb3057ecb`, cache TTL `AMF_CACHE_TTL_SECONDS`, fallback `backend/data/abeis-liste-noire.csv`)
 - **Réputation presse** : Anthropic Claude + outil serveur `web_search` (clé requise)
 - **Présence sociale / OSINT** : Serper.dev ou Google CSE (`_search_backend.py`)
 - **Identité** : Wikipédia / Wikidata (`handle_resolver`)

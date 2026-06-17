@@ -19,7 +19,7 @@ tags: [lean-startup, unmask, product]
 | Prénom + nom | Recherche large mais ambiguë (homonymes) — sert surtout au critère 3 (discours via mentions publiques) |
 | Nom commercial / société | Critère 1 (SIREN, BODACC) fiable |
 | SIREN direct | Critère 1 fiable immédiat |
-| URL de site web | Critère 2 (liste noire AMF/ACPR) fiable |
+| URL de site web | Critère 2 (liste noire AMF) fiable |
 | URL / handle chaîne YouTube | Critère 3 fiable (analyse discours sur descriptions + métadonnées via YouTube API) |
 | Handle Instagram / TikTok | Affiché en carte d'identité, mais pas de score fiable dessus (CGU bloquent le scraping) |
 
@@ -43,7 +43,7 @@ Affichée avant tout si déclenchée.
 
 | Condition | Message |
 |---|---|
-| Site/société sur liste noire AMF/ACPR | ⚠️ Référencé sur la liste noire officielle · Score plafonné à 10/100 |
+| Site/société sur liste noire AMF | ⚠️ Référencé sur la liste noire officielle · Score plafonné à 10/100 |
 | Procédure collective (BODACC) | ⚠️ Procédure collective en cours · Score plafonné à 40/100 |
 
 ---
@@ -78,7 +78,7 @@ Données brutes. "Non trouvé" si absent.
 | # | Critère | Poids | Type | Source |
 |---|---|---|---|---|
 | 1 | Identité légale vérifiable (SIREN actif, pas en procédure collective) | 40 pts | Factuel | Annuaire Entreprises + BODACC |
-| 2 | Absence sur liste noire AMF/ACPR | 35 pts | Factuel | ABE Infoservice (recherche par site web ou raison sociale) |
+| 2 | Absence sur liste noire AMF | 35 pts | Factuel | ABE Infoservice (recherche par site web ou raison sociale) |
 | 3 | Analyse de discours — promesses de gains, vocabulaire à risque | 25 pts | Interprétatif | LLM Claude sur : descriptions YouTube si chaîne fournie · mentions publiques (Google CSE / Serper) si nom seul · bio site si URL |
 
 **Règles :**

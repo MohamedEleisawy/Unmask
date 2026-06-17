@@ -11,7 +11,7 @@ Axe NOTÉ (unique) :
   • Réputation publique ........ 100  (presse, signalements, enquêtes, condamnations)
 
 Couche RÉGLEMENTAIRE = drapeaux/caps, jamais de points positifs :
-  • Liste noire AMF/ACPR ........ alerte critique -> plafonne le score à 20
+  • Liste noire AMF ............. alerte critique -> plafonne le score à 20
   • Condamnation judiciaire avérée  alerte critique -> plafonne le score à 20
   • >= 2 sociétés radiées/fermées .. warning -> plafonne le score à 50 (pas de vert)
 
@@ -28,7 +28,7 @@ NEUTRE (50) qui s'affiche « à vérifier », jamais au vert rassurant.
 from typing import Optional
 
 # Plafonds appliqués par la couche réglementaire (drapeaux).
-CRITICAL_CAP = 20   # liste noire AMF/ACPR ou condamnation avérée
+CRITICAL_CAP = 20   # liste noire AMF ou condamnation avérée
 WARNING_CAP = 50    # radiations répétées : interdit le vert, sans écraser
 NEUTRAL_SCORE = 50  # réputation non évaluable -> « à vérifier », pas vert
 
@@ -90,17 +90,16 @@ def compute_alerts(pillars: dict) -> list[dict]:
     """
     alerts = []
 
-    # 1. Liste noire AMF/ACPR -> critique.
+    # 1. Liste noire AMF -> critique.
     comp = pillars.get("compliance") or {}
     if comp.get("is_blacklisted"):
         reg = comp.get("regulators") or {}
         alerts.append({
             "type": "regulatory_blacklist",
             "severity": "critique",
-            "message": "Présence sur la liste noire AMF/ACPR.",
+            "message": "Présence sur la liste noire AMF.",
             "details": [
                 f"AMF : {reg.get('amf_result', 'non consulté')}",
-                f"ACPR : {reg.get('acpr_result', 'non consulté')}",
             ],
         })
 

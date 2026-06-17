@@ -29,7 +29,7 @@ def build_audit_trail(pillars: dict) -> list[dict]:
     """Journal des SOURCES TECHNIQUES du moteur (pipeline) et de leurs résultats.
 
     Volontairement limité aux sources d'infrastructure (Wikipedia, Wikidata,
-    Google Search, Data.gouv, AMF, ACPR) — PAS les articles de presse ni les
+    Google Search, Data.gouv, AMF) — PAS les articles de presse ni les
     comptes sociaux, qui sont des PREUVES affichées séparément. On ne mélange
     jamais « ce qui a été consulté » avec « ce qui a été trouvé sur la personne ».
     """
@@ -86,7 +86,7 @@ def build_audit_trail(pillars: dict) -> list[dict]:
     comp = pillars.get("compliance") or {}
     reg = comp.get("regulators") or {}
     if reg:
-        for code, label in (("amf", "AMF"), ("acpr", "ACPR")):
+        for code, label in (("amf", "AMF"),):
             result = reg.get(f"{code}_result")
             found = result == "found"
             trail.append(_entry(

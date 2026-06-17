@@ -1,5 +1,5 @@
 """
-Verification AMF/ACPR - Liste noire ABE Infoservice.
+Verification AMF - Liste noire ABE Infoservice.
 
 Source primaire : data.gouv.fr - dataset "Listes noires des entites non
 autorisees a proposer des produits ou services financiers en France".

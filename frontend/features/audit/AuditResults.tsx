@@ -32,7 +32,7 @@ type SocialHit = {
  * score centré) puis le déroulé. La transition est l'entrée séquencée des
  * sections au montage (.ld-reveal), neutralisée si prefers-reduced-motion.
  *
- * Aucun bloc existant n'a été retiré : alerte critique, conformité AMF/ACPR,
+ * Aucun bloc existant n'a été retiré : alerte critique, conformité AMF,
  * âge de domaine RDAP, couverture et export PDF sont conservés et restylés.
  */
 export function AuditResults({ results }: Props) {
@@ -886,8 +886,12 @@ function EvidenceRow({ article, last }: { article: EvidenceArticle; last?: boole
       ) : (
         <span className="font-landing-body text-[14px] font-bold leading-snug text-[var(--ld-value)]">{article.title}</span>
       )}
-      {open && article.reason && (
-        <p className="font-landing-body text-[12px] leading-relaxed text-[var(--ld-text-muted)]">{article.reason}</p>
+      {article.reason && (
+        <div className="ld-collapse" data-open={open} aria-hidden={!open}>
+          <div className="ld-collapse-inner">
+            <p className="font-landing-body text-[12px] leading-relaxed text-[var(--ld-text-muted)]">{article.reason}</p>
+          </div>
+        </div>
       )}
       <span className="font-landing-body text-[12px] text-[var(--ld-text-faint)]">
         {media || "Source"}{article.year ? ` · ${article.year}` : ""}
@@ -982,7 +986,7 @@ function SourcesAnalyzed({ trail, hits }: { trail?: AuditTrailEntry[]; hits: Soc
   );
 }
 
-/* ---- Conformité AMF/ACPR & domaine (conservés, restylés --ld) ---- */
+/* ---- Conformité AMF & domaine (conservés, restylés --ld) ---- */
 
 function BlacklistCard({ data }: { data: PillarData | undefined }) {
   const present = (data?.is_blacklisted as boolean | undefined) === true;
@@ -992,14 +996,14 @@ function BlacklistCard({ data }: { data: PillarData | undefined }) {
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <p className="font-landing-body text-[14px] font-semibold text-[var(--ld-value)]">Présence liste noire</p>
-          <p className="font-landing-body text-[12px] text-[var(--ld-text-faint)]">Bases AMF et ACPR</p>
+          <p className="font-landing-body text-[12px] text-[var(--ld-text-faint)]">Base AMF</p>
         </div>
         <span className="rounded-full px-2.5 py-1 font-landing-body text-[12px] font-semibold" style={{ color, background: verdictWash(color) }}>
           {present ? "Présent" : "Non présent"}
         </span>
       </div>
       <div className="flex flex-col gap-2">
-        {["AMF", "ACPR"].map((l) => (
+        {["AMF"].map((l) => (
           <div key={l} className="flex items-center justify-between">
             <span className="font-landing-body text-[12px] text-[var(--ld-text-faint)]">{l}</span>
             <span className="font-landing-body text-[12px] font-medium" style={{ color: present ? VERDICT.bad : VERDICT.good }}>

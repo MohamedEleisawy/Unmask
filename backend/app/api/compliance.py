@@ -1,5 +1,5 @@
 """
-Endpoint FastAPI - Verification de conformite institutionnelle AMF/ACPR.
+Endpoint FastAPI - Verification de conformite institutionnelle AMF.
 
 Route : POST /audit/compliance
 Ce router expose la verification de la liste noire ABE Infoservice
@@ -12,7 +12,7 @@ from typing import Optional
 
 from app.services.amf_checker import check_compliance
 
-router = APIRouter(prefix="/audit", tags=["Conformite AMF/ACPR"])
+router = APIRouter(prefix="/audit", tags=["Conformite AMF"])
 
 
 # ---------------------------------------------------------------------------
@@ -48,7 +48,7 @@ class ComplianceResponse(BaseModel):
     """Reponse structuree de la verification AMF."""
 
     is_blacklisted: bool = Field(
-        description="True si l'entite figure dans la liste noire AMF/ACPR."
+        description="True si l'entite figure dans la liste noire AMF."
     )
     matches: list[dict] = Field(
         description="Liste des entrees correspondantes avec leur source et categories."
@@ -69,10 +69,10 @@ class ComplianceResponse(BaseModel):
 @router.post(
     "/compliance",
     response_model=ComplianceResponse,
-    summary="Verifier une entite contre la liste noire AMF/ACPR",
+    summary="Verifier une entite contre la liste noire AMF",
     description=(
         "Verifie si l'entite fournie (URL, nom, secteur) figure dans la liste noire "
-        "officielle ABE Infoservice (AMF + ACPR). "
+        "officielle ABE Infoservice (AMF). "
         "Retourne les correspondances trouvees avec leur source officielle."
     ),
 )

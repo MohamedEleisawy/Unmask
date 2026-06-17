@@ -96,7 +96,7 @@ CASES = [
             "identity_resolution": {"real_name": "Entité Blacklistée"},
             "compliance": {
                 "is_blacklisted": True,
-                "regulators": {"amf_result": "found", "acpr_result": "non consulté"},
+                "regulators": {"amf_result": "found"},
             },
             "reputation": {
                 "available": True,

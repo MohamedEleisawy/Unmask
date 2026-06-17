@@ -35,7 +35,7 @@ Depuis `frontend/` :
 - `ALLOWED_ORIGINS` — origines CORS (CSV). Dev `*`, **prod URL front exacte**.
 - `AMF_CACHE_TTL_SECONDS` — TTL cache liste noire AMF (défaut `21600` = 6h).
 
-Les sources data.gouv (SIREN, AMF/ACPR) ne nécessitent **aucune clé**.
+Les sources data.gouv (SIREN, AMF) ne nécessitent **aucune clé**.
 
 ### Frontend — variable de build
 

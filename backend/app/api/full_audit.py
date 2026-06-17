@@ -125,7 +125,7 @@ def _log_audit_summary(name: Optional[str], pillars: dict, breakdown: list[dict]
     logger.info("  Entreprise (data.gouv) : trouvée=%s", bool(legal.get("found")))
 
     comp = pillars.get("compliance") or {}
-    logger.info("  AMF/ACPR : liste_noire=%s", comp.get("is_blacklisted"))
+    logger.info("  AMF : liste_noire=%s", comp.get("is_blacklisted"))
 
     rep = pillars.get("reputation") or {}
     if rep.get("available"):

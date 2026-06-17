@@ -241,8 +241,7 @@ export async function generateAuditPdf(results: AuditResponse): Promise<void> {
   // ---- Vérifications réglementaires ---------------------------------------
   heading("Vérifications réglementaires");
   const amf = regulators.amf_result === "found" ? "correspondance trouvée" : "aucune correspondance";
-  const acpr = regulators.acpr_result === "found" ? "correspondance trouvée" : "aucune correspondance";
-  para(`AMF : ${amf}.  ACPR : ${acpr}.`);
+  para(`AMF : ${amf}.`);
 
   // ---- Réputation publique -------------------------------------------------
   heading("Réputation publique");

@@ -6,7 +6,7 @@ Guide de référence pour tout développeur ou assistant IA travaillant sur **Un
 
 ## Contexte métier
 
-Unmask — **PWA d'audit de crédibilité factuel** pour influenceurs, entrepreneurs et marques. On agrège des **sources publiques officielles vérifiables** (data.gouv.fr, AMF/ACPR, presse via Claude+web_search, YouTube, RDAP) en un **score 0-100 + verdict + timeline + preuves cliquables**. **Zero-storage RGPD** : traitement en mémoire vive, rien sur disque/base. Principe « No proof, no point » : aucun score sans source publique retournée. Stack : **FastAPI + Next.js 16**.
+Unmask — **PWA d'audit de crédibilité factuel** pour influenceurs, entrepreneurs et marques. On agrège des **sources publiques officielles vérifiables** (data.gouv.fr, AMF, presse via Claude+web_search, YouTube, RDAP) en un **score 0-100 + verdict + timeline + preuves cliquables**. **Zero-storage RGPD** : traitement en mémoire vive, rien sur disque/base. Principe « No proof, no point » : aucun score sans source publique retournée. Stack : **FastAPI + Next.js 16**.
 
 Deux publics, un même outil : particuliers prudents (avant un achat) et marques/agences (due diligence). Voir [`PRODUCT.md`](PRODUCT.md) et [`DESIGN.md`](DESIGN.md).
 
@@ -16,7 +16,7 @@ Le modèle a évolué vers un modèle **« risque réel »**. **L'ancien barème
 
 - **Seul axe noté** : la **réputation publique** (0-100), produite par `reputation_analyzer.py` (Claude `claude-haiku-4-5` + outil serveur `web_search`).
 - **Couche réglementaire = drapeaux qui plafonnent, jamais de points positifs** :
-  - liste noire AMF/ACPR ou condamnation judiciaire → **critique**, cap **20**, verdict `alerte` ;
+  - liste noire AMF ou condamnation judiciaire → **critique**, cap **20**, verdict `alerte` ;
   - ≥ 2 sociétés radiées (même dirigeant) → **warning**, cap **50** (interdit le vert).
 - **SIREN / réseaux / Wikipédia = descriptifs**, jamais notés (la notoriété ne prouve pas l'honnêteté).
 - **Réputation non évaluable** (empreinte trop mince ou clé absente) → **50 neutre « à vérifier »**, pas 100.

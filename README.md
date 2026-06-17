@@ -1,6 +1,6 @@
 # Unmask
 
-**PWA d'audit de crédibilité factuel** pour influenceurs, entrepreneurs et marques. Unmask agrège des **sources publiques officielles et vérifiables** (data.gouv.fr, AMF/ACPR, presse via Claude + web_search, YouTube, RDAP) pour produire un **score 0-100**, un **verdict**, une **timeline** et des **preuves cliquables**. Aucune donnée personnelle stockée — traitement en mémoire vive, conforme RGPD.
+**PWA d'audit de crédibilité factuel** pour influenceurs, entrepreneurs et marques. Unmask agrège des **sources publiques officielles et vérifiables** (data.gouv.fr, AMF, presse via Claude + web_search, YouTube, RDAP) pour produire un **score 0-100**, un **verdict**, une **timeline** et des **preuves cliquables**. Aucune donnée personnelle stockée — traitement en mémoire vive, conforme RGPD.
 
 > **Pas de verdict définitif.** Unmask montre les faits et leurs sources ; il ne dit pas qui croire. Chaque affirmation porte une source publique vérifiable (« No proof, no point »).
 
@@ -11,7 +11,7 @@
 Deux publics partagent le même outil (`/audit`) :
 
 - **Particuliers prudents** — « Cet influenceur est-il légitime, ou vais-je me faire avoir avant d'acheter sa formation ? »
-- **Marques & agences** — due diligence légère avant un partenariat (identité légale, AMF/ACPR, réputation).
+- **Marques & agences** — due diligence légère avant un partenariat (identité légale, AMF, réputation).
 
 Une **landing marketing** (`/`) sert de porte d'entrée. Détails produit/marque dans [`PRODUCT.md`](PRODUCT.md) et [`DESIGN.md`](DESIGN.md).
 
@@ -34,7 +34,7 @@ Le principe : **on ne note QUE ce qui qualifie la fiabilité réelle d'une entit
 | Élément | Rôle dans le score |
 |---|---|
 | **Réputation publique** (presse, plaintes, enquêtes, condamnations) | **Seul axe noté** — 0 à 100 |
-| Liste noire **AMF/ACPR** | Drapeau **critique** → plafonne le score à **20** + verdict « alerte » |
+| Liste noire **AMF** | Drapeau **critique** → plafonne le score à **20** + verdict « alerte » |
 | **Condamnation judiciaire** avérée | Drapeau **critique** → plafonne à **20** |
 | ≥ 2 sociétés **radiées/fermées** (même dirigeant) | **Warning** → plafonne à **50** (interdit le vert) |
 | SIREN, statut juridique, réseaux sociaux, Wikipédia | **Descriptifs uniquement**, hors score |
@@ -59,7 +59,7 @@ backend/app/
     audit_scoring.py         # Score, caps réglementaires, alertes, verdict, coverage
     audit_report.py          # build_audit_trail + build_timeline
     siren_checker.py         # Identité légale (Annuaire des Entreprises)
-    amf_checker.py           # Liste noire AMF/ACPR (CSV data.gouv, cache 6h)
+    amf_checker.py           # Liste noire AMF (CSV data.gouv, cache 6h)
     domain_intelligence.py   # Âge du domaine via RDAP (informatif)
     handle_resolver.py       # Résolution d'identité (Wikipédia/Wikidata)
     social_presence_checker.py  # Profils sociaux (Google site:)
@@ -86,7 +86,7 @@ Patterns détaillés dans [`docs/claude/architecture.md`](docs/claude/architectu
 
 - **Python 3.11+**
 - **Node.js 20+** (npm)
-- **Clés API** (voir §7) — toutes optionnelles : chaque sous-signal se désactive proprement (`available: false`) si sa clé manque. Les critères data.gouv (SIREN, AMF/ACPR) fonctionnent **sans clé**.
+- **Clés API** (voir §7) — toutes optionnelles : chaque sous-signal se désactive proprement (`available: false`) si sa clé manque. Les critères data.gouv (SIREN, AMF) fonctionnent **sans clé**.
 - Aucune base de données (zero-storage par conception).
 
 ## 6. Installation & lancement
