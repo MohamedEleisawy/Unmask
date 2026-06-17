@@ -1,4 +1,5 @@
-import Link from "next/link";
+"use client";
+
 import { IconArrowRight } from "@/features/landing/landingIcons";
 import { Reveal } from "@/features/landing/Reveal";
 
@@ -23,13 +24,16 @@ export function LandingCTA() {
           </p>
         </div>
 
-        <Link
-          href="#"
+        <button
+          type="button"
+          onClick={() =>
+            window.scrollTo({ top: 0, behavior: "smooth" })
+          }
           className="group flex h-[36px] items-center justify-center gap-[6px] rounded-[12px] bg-[#936bff] px-[8px] font-landing-body text-[14px] leading-[20px] tracking-[-0.1504px] text-[#f3f3f3] transition-[background-color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[#7d54f0] active:-translate-y-px active:scale-[0.98] md:h-[44px] md:px-5 md:text-[15px]"
         >
           Vérifier un profil
           <IconArrowRight className="size-[16px] transition-transform duration-150 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
-        </Link>
+        </button>
       </Reveal>
     </section>
   );

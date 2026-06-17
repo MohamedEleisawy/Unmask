@@ -307,6 +307,28 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
+/* ---- Curseur main sur tout élément interactif ----
+   Tailwind/Preflight remet `cursor: default` sur les <button>. On rétablit le
+   curseur « main » sur l'ensemble des éléments réellement cliquables (boutons,
+   liens, résumés, contrôles ARIA, onglets) pour signaler l'interaction.
+   Les éléments désactivés gardent le curseur d'interdiction. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="tab"]:not([aria-disabled="true"]),
+[role="link"]:not([aria-disabled="true"]),
+summary,
+label[for],
+a[href],
+select:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Refine selection contrast */
 ::selection {
   background: var(--color-accent);

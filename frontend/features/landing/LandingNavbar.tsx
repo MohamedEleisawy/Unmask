@@ -18,7 +18,9 @@ export function LandingNavbar() {
     <header className="w-full bg-[#936bff]" data-node-id="963:3172">
       {/* Mobile : largeur 342px (Figma node 963:3173). Desktop : conteneur 1200px. */}
       <div className="mx-auto flex h-[68px] w-full max-w-[342px] items-center justify-between px-0 py-[22px] md:h-[72px] md:max-w-[1200px] md:px-10 md:py-0">
-        <LandingLogo />
+        <a href="/" aria-label="Unmask — retour à l'accueil" className="flex shrink-0 items-center transition-opacity hover:opacity-80">
+          <LandingLogo />
+        </a>
 
         {/* Liens inline — desktop uniquement, sur une seule ligne */}
         <nav className="hidden items-center gap-8 md:flex">

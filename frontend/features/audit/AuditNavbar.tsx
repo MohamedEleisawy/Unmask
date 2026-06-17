@@ -34,7 +34,9 @@ export function AuditNavbar({
 
         {/* Centre : logo (et, sur résultat mobile, badge de score épinglé). */}
         <div className="flex min-w-0 flex-1 items-center justify-center gap-[12px]">
-          <UnmaskLogo />
+          <a href="/" aria-label="Unmask — retour à l'accueil" className="flex shrink-0 items-center transition-opacity hover:opacity-80">
+            <UnmaskLogo />
+          </a>
           {center}
         </div>
 
