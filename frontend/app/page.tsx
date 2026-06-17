@@ -14,13 +14,13 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-dvh flex-col bg-[var(--ld-bg)]">
       <LandingNavbar />
-      <main className="flex flex-col gap-[48px] pt-[48px] md:gap-[96px] md:pt-[72px]">
+      <main className="flex flex-col gap-[48px] pt-[48px] md:gap-[120px] md:pt-[120px]">
         <LandingHero />
         <LandingFeaturesGrid />
         <LandingHowItWorks />
         <LandingCTA />
       </main>
-      <div className="mt-[48px] md:mt-[96px]">
+      <div className="mt-[48px] md:mt-[120px]">
         <LandingFooter />
       </div>
     </div>

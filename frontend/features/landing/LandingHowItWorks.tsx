@@ -49,9 +49,9 @@ const CRITERIA: Criterion[] = [
 export function LandingHowItWorks() {
   return (
     <section id="how" className="flex w-full flex-col gap-[32px] md:gap-12" data-node-id="963:3237">
-      {/* En-tête — padding latéral 18px (Figma node 963:3238). Desktop : centré. */}
-      <Reveal as="div" className="mx-auto flex w-full max-w-[354px] flex-col items-start gap-[8px] px-[18px] md:max-w-[1200px] md:items-center md:px-10 md:text-center">
-        <h2 className="font-landing-display text-[32px] leading-[32px] tracking-[0.0703px] text-[var(--ld-text)] md:text-[48px] md:leading-[48px]">
+      {/* En-tête — aligné à gauche, cadré comme « Pourquoi utiliser unmask ? ». */}
+      <Reveal as="div" className="mx-auto flex w-full max-w-[342px] flex-col items-start gap-[8px] px-[24px] md:max-w-[1153px] md:px-0">
+        <h2 className="font-landing-display text-[32px] leading-[32px] tracking-[0.0703px] text-[var(--ld-text)]">
           Comment calculons-nous{" "}
           <span className="text-[#936bff]">l&apos;indice de confiance</span> ?
         </h2>
@@ -60,10 +60,11 @@ export function LandingHowItWorks() {
         </p>
       </Reveal>
 
-      {/* Bloc surface pleine largeur, padding x24 y48 (Figma node 963:3242). */}
-      <div className="w-full bg-[var(--ld-surface)] px-[24px] py-[48px] md:py-16">
+      {/* Mobile : bloc surface pleine largeur. Desktop : carte contenue, radius 15,
+          padding x24 y48 (maquette node 1262:7306). */}
+      <div className="w-full bg-[var(--ld-surface)] px-[24px] py-[48px] md:mx-auto md:max-w-[1153px] md:rounded-[15px]">
         {/* Mobile : liste verticale. Desktop : grille 2 colonnes. */}
-        <div className="mx-auto grid w-full max-w-[342px] grid-cols-1 gap-[16px] md:max-w-[1000px] md:grid-cols-2 md:gap-x-12 md:gap-y-10">
+        <div className="mx-auto grid w-full max-w-[342px] grid-cols-1 gap-[16px] md:max-w-none md:grid-cols-2 md:gap-x-[16px] md:gap-y-[16px]">
           {CRITERIA.map((c, i) => (
             <Reveal key={c.title} delay={i * 60}>
               <CriterionRow {...c} />
