@@ -85,7 +85,7 @@
   /* Verdict — vif sur fond sombre. --*-on = texte/icône posé SUR la couleur. */
   --verdict-good: #0cdda5;
   --verdict-good-on: #06140f;
-  --verdict-warn: #f5b454;
+  --verdict-warn: #fec530;
   --verdict-warn-on: #1d1505;
   --verdict-bad: #f84b5f;
   --verdict-bad-on: #1f0a0c;
@@ -128,14 +128,14 @@
 /* Landing — mode sombre (toggle explicite OU préférence système sans override). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --ld-bg: #131016;
-    --ld-surface: #1d1825;
+    --ld-bg: #101010;
+    --ld-surface: #1b1b1b;
     --ld-text: #f3eef6;
     --ld-text-muted: #b3a9bd;
     --ld-text-faint: #9d93a8;
     --ld-border: rgba(255, 255, 255, 0.08);
     --ld-border-solid: #322b3d;
-    --ld-surface-alt: #221c2b;
+    --ld-surface-alt: #1b1b1b;
     --ld-label: #9d93a8;
     --ld-value: #e8e2ee;
     --ld-username: #b9a4ff;     /* @handles lisibles sur surface sombre */
@@ -148,14 +148,14 @@
 }
 
 [data-theme="dark"] {
-  --ld-bg: #131016;
-  --ld-surface: #1d1825;
+  --ld-bg: #101010;
+  --ld-surface: #1b1b1b;
   --ld-text: #f3eef6;
   --ld-text-muted: #b3a9bd;
   --ld-text-faint: #9d93a8;
   --ld-border: rgba(255, 255, 255, 0.08);
   --ld-border-solid: #322b3d;
-  --ld-surface-alt: #221c2b;
+  --ld-surface-alt: #1b1b1b;
   --ld-label: #9d93a8;
   --ld-value: #e8e2ee;
   --ld-username: #b9a4ff;
@@ -180,12 +180,12 @@
     --au-text-line: #b0b0b0;
 
     /* Verdict — assombri pour rester ≥ 4.5:1 sur surface claire. */
-    --verdict-good: #0a805f;
-    --verdict-good-on: #ffffff;
-    --verdict-warn: #9c620d;
-    --verdict-warn-on: #ffffff;
-    --verdict-bad: #d6293f;
-    --verdict-bad-on: #ffffff;
+    --verdict-good: #0cdda5;
+    --verdict-good-on: #06140f;
+    --verdict-warn: #fec530;
+    --verdict-warn-on: #1d1505;
+    --verdict-bad: #f84b5f;
+    --verdict-bad-on: #1f0a0c;
   }
 }
 
@@ -201,12 +201,12 @@
   --au-text-dim: #767676;
   --au-text-line: #b0b0b0;
 
-  --verdict-good: #0a805f;
-  --verdict-good-on: #ffffff;
-  --verdict-warn: #9c620d;
-  --verdict-warn-on: #ffffff;
-  --verdict-bad: #d6293f;
-  --verdict-bad-on: #ffffff;
+  --verdict-good: #0cdda5;
+  --verdict-good-on: #06140f;
+  --verdict-warn: #fec530;
+  --verdict-warn-on: #1d1505;
+  --verdict-bad: #f84b5f;
+  --verdict-bad-on: #1f0a0c;
 }
 
 html, body {
