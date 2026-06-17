@@ -59,20 +59,21 @@ export function LandingHero() {
 
   return (
     <section className="w-full px-[24px] md:px-10" data-node-id="963:3184">
-      {/* Mobile : colonne unique. Desktop : split asymétrique 6/5, asset à droite. */}
-      <div className="mx-auto flex w-full max-w-[342px] flex-col items-start gap-[24px] md:max-w-[1200px] md:grid md:grid-cols-[1.15fr_1fr] md:items-center md:gap-16">
+      {/* Mobile : colonne unique. Desktop : colonne unique large (maquette node 1262:7252,
+          largeur 824px), alignée à gauche — pas de visuel à droite. */}
+      <div className="mx-auto flex w-full max-w-[342px] flex-col items-start gap-[24px] md:max-w-[1153px]">
 
-        {/* Colonne contenu */}
-        <div className="flex flex-col items-start gap-[24px] md:max-w-[560px]">
-          {/* Titre + paragraphe (Figma node 963:3186, gap 16px) */}
+        {/* Colonne contenu — largeur maquette 824px, bord gauche aligné sur les autres sections. */}
+        <div className="flex w-full flex-col items-start gap-[24px] md:max-w-[824px]">
+          {/* Titre + paragraphe (Figma node 1262:7254, gap 16px) */}
           <div className="ld-reveal flex flex-col items-start gap-[16px]">
-            <h1 className="text-balance font-landing-display text-[48px] leading-[48px] tracking-[0.3516px] text-[var(--ld-text)] md:text-[56px] md:leading-[54px] md:tracking-[-0.5px] lg:text-[72px] lg:leading-[68px]">
+            <h1 className="text-balance font-landing-display text-[48px] leading-[48px] tracking-[0.3516px] text-[var(--ld-text)] md:text-[52px]">
               Un feed ne dit{" "}
               <span className="whitespace-nowrap">
                 pas <span className="text-[#936bff]">tout</span>.
               </span>
             </h1>
-            <div className="flex max-w-[320px] flex-col gap-3 font-landing-body text-[14px] leading-[20px] tracking-[-0.1504px] text-pretty text-[var(--ld-text)] md:max-w-[460px] md:text-[16px] md:leading-[24px]">
+            <div className="flex max-w-[320px] flex-col gap-3 font-landing-body text-[14px] leading-[20px] tracking-[-0.1504px] text-pretty text-[var(--ld-text)] md:max-w-[824px] md:text-[16px]">
               <p>
                 Consultez en quelques secondes les informations publiques disponibles
                 sur un influenceur, coach ou vendeur en ligne.
@@ -133,102 +134,8 @@ export function LandingHero() {
             </button>
           </form>
         </div>
-
-        {/* Colonne asset — aperçu de rapport, desktop uniquement */}
-        <div className="ld-hero-in hidden md:block" style={{ ["--reveal-delay" as string]: "120ms", animationDelay: "120ms" }}>
-          <HeroVisual />
-        </div>
       </div>
     </section>
-  );
-}
-
-/**
- * Aperçu de rapport d'audit — mini-composant réel (pas une fausse capture en div).
- * Suit l'étoile du Nord « dossier de vérification » (DESIGN.md) : le score d'abord,
- * en mono tabulaire coloré par le verdict, puis les vérifications en grille de lignes.
- * Pas de pastilles arc-en-ciel, pas de chips teintées, pas d'ombre portée
- * (profondeur par empilement tonal). Un seul accent de verdict : le vert « fiable ».
- */
-function HeroVisual() {
-  // Vérifications descriptives : coche neutre + valeur. La valeur-mesure (ratio,
-  // ancienneté) passe en mono tabulaire — marqueur du fait, cf. « Règle du Chiffre Mono ».
-  const checks: { label: string; value: string; mono?: boolean }[] = [
-    { label: "Identité légale", value: "SIREN actif" },
-    { label: "Liste noire AMF", value: "Absent" },
-    { label: "Réputation presse", value: "0 alerte" },
-  ];
-
-  return (
-    <div className="relative ml-auto w-full max-w-[360px]">
-      <div className="absolute -inset-6 -z-10 rounded-[32px] bg-[#936bff]/10 blur-3xl" />
-      <div className="overflow-hidden rounded-2xl border border-[var(--ld-border-solid)] bg-[var(--ld-surface)]">
-
-        {/* En-tête : identité auditée + verdict doublé (point + ring + libellé). */}
-        <div className="flex items-center justify-between gap-3 px-6 pt-5 pb-4">
-          <div className="flex flex-col gap-0.5">
-            <p className="font-landing-body text-[10px] uppercase tracking-[0.18em] text-[var(--ld-text-faint)]">
-              Rapport d&apos;audit
-            </p>
-            <p className="font-landing-body text-[18px] font-bold leading-tight text-[var(--ld-text)]">
-              @mentor_finance
-            </p>
-          </div>
-          <span className="flex shrink-0 items-center gap-1.5 rounded-md border border-[var(--ld-score)]/30 bg-[var(--ld-score)]/10 px-2 py-1 font-landing-body text-[11px] font-semibold text-[var(--ld-score)]">
-            <CheckIcon className="size-3" />
-            Fiable
-          </span>
-        </div>
-
-        {/* Score — la signature. Mono tabulaire géant, coloré par le verdict (vert). */}
-        <div className="flex items-baseline gap-2 border-y border-[var(--ld-border-solid)] bg-[var(--ld-surface-alt)] px-6 py-5">
-          <span className="font-[family-name:var(--font-mono)] text-[56px] font-medium leading-none tracking-[-0.04em] tabular-nums text-[var(--ld-score)]">
-            87
-          </span>
-          <span className="font-[family-name:var(--font-mono)] text-[18px] tabular-nums text-[var(--ld-text-faint)]">
-            /100
-          </span>
-          <span className="ml-auto self-center text-right font-landing-body text-[11px] leading-snug text-[var(--ld-text-muted)]">
-            Indice de
-            <br />
-            confiance
-          </span>
-        </div>
-
-        {/* Vérifications — grille de lignes tabulaire (jamais des cartes empilées). */}
-        <ul className="flex flex-col px-6 py-2">
-          {checks.map((c) => (
-            <li
-              key={c.label}
-              className="flex items-center justify-between gap-3 border-b border-[var(--ld-border)] py-2.5 last:border-b-0"
-            >
-              <span className="flex items-center gap-2.5 font-landing-body text-[13px] text-[var(--ld-text-muted)]">
-                <CheckIcon className="size-3.5 shrink-0 text-[var(--ld-score)]" />
-                {c.label}
-              </span>
-              <span
-                className={
-                  c.mono
-                    ? "font-[family-name:var(--font-mono)] text-[12px] tabular-nums text-[var(--ld-value)]"
-                    : "font-landing-body text-[12px] font-medium text-[var(--ld-value)]"
-                }
-              >
-                {c.value}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-/** Coche fine — marqueur neutre de vérification (suit currentColor). */
-function CheckIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
   );
 }
 
