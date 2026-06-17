@@ -1,4 +1,7 @@
-const LINKS = ["À propos", "Aide", "Contact"];
+const LINKS = [
+  { label: "Accueil", href: "/" },
+  { label: "Mentions légales", href: "/mentions-legales" },
+];
 
 /**
  * Footer — barre violette reprise de la maquette Figma (node 963:3285).
@@ -12,11 +15,11 @@ export function LandingFooter() {
         <nav className="flex items-center gap-[24px]">
           {LINKS.map((link) => (
             <a
-              key={link}
-              href="#"
+              key={link.label}
+              href={link.href}
               className="font-['Inter',var(--font-landing-body)] text-[16px] leading-[24px] font-normal text-[#e1e1e1] transition-colors hover:text-white"
             >
-              {link}
+              {link.label}
             </a>
           ))}
         </nav>

@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { AuditResponse, AuditTrailEntry, Coverage, DomainIntelligence, PillarData, ScoreAlert, ScoreBreakdownRow, Timeline } from "./types";
+import type { AuditResponse, AuditTrailEntry, DomainIntelligence, PillarData, ScoreAlert, ScoreBreakdownRow, Timeline } from "./types";
 import { generateAuditPdf } from "./generatePdf";
 import { VERDICT, scoreColor, verdictWash } from "@/shared/ui/verdict";
+import { AuditNavbar } from "@/features/audit/AuditNavbar";
 
 type Props = { results: AuditResponse };
 
@@ -46,7 +47,7 @@ export function AuditResults({ results }: Props) {
     }
   };
 
-  const { global_score, entity, pillars, disclaimer, score_breakdown, audit_trail, timeline, alerts, coverage, domain_intelligence } = results;
+  const { global_score, entity, pillars, disclaimer, score_breakdown, audit_trail, timeline, alerts, domain_intelligence } = results;
   const entityName = entity.name || entity.url || "Entité auditée";
 
   // --- Animation du score (phase A) : remplissage 0→score + compteur. ---
@@ -108,7 +109,6 @@ export function AuditResults({ results }: Props) {
     <ScoreResultCard
       score={global_score}
       animScore={animScore}
-      coverage={coverage}
       onDownload={handleDownloadPdf}
       pdfBusy={pdfBusy}
     />
@@ -120,22 +120,12 @@ export function AuditResults({ results }: Props) {
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-[var(--ld-bg)]">
-      {/* Navbar violette — chevron retour + logo (Figma node 963:3564 / desktop). */}
-      <header className="sticky top-0 z-[var(--z-sticky)] w-full bg-[#936bff]">
-        <div className="mx-auto flex h-[68px] w-full max-w-[1200px] items-center justify-between px-[24px] md:px-10">
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            aria-label="Revenir à l'accueil"
-            className="tap-target flex size-[40px] items-center justify-center rounded-[12px] bg-[#e7e7e7] text-[#101010] transition-transform active:scale-95"
-          >
-            <ChevronLeftIcon />
-          </button>
-          {/* Centre : logo (desktop) ; badge de score épinglé au scroll (mobile,
-              phase B). Le badge bascule en visible une fois le héros sorti. */}
-          <div className="hidden md:block">
-            <UnmaskLogo />
-          </div>
+      {/* Navbar partagée — bouton retour à gauche, logo, bascule de thème.
+          center : badge de score épinglé au scroll (mobile, phase B).
+          right  : action PDF (mobile ; sur desktop elle vit dans la carte de score). */}
+      <AuditNavbar
+        onBack={() => router.push("/")}
+        center={
           <div
             className="md:hidden"
             style={{
@@ -148,6 +138,8 @@ export function AuditResults({ results }: Props) {
           >
             <ScoreBadge score={animScore} />
           </div>
+        }
+        right={
           <button
             type="button"
             onClick={handleDownloadPdf}
@@ -157,10 +149,8 @@ export function AuditResults({ results }: Props) {
           >
             <MoreIcon />
           </button>
-          {/* Desktop : actions à droite déplacées dans la carte de score. */}
-          <span className="hidden size-[40px] md:block" aria-hidden="true" />
-        </div>
-      </header>
+        }
+      />
 
       {/* Héros violet — titre + anneau de score (Figma node 963:3608).
           Phase B : quand le score s'épingle dans la navbar, le gros héros
@@ -205,6 +195,7 @@ export function AuditResults({ results }: Props) {
                 photo={photo}
                 identity={legalFound ? identity : null}
                 entity={entity}
+                ringColor={scoreColor(global_score)}
               />
             </SectionCard>
 
@@ -272,9 +263,14 @@ export function AuditResults({ results }: Props) {
             </p>
           </div>
 
-          {/* Colonne droite (desktop) — carte de score sticky. */}
-          <aside className="ld-reveal hidden md:sticky md:top-[92px] md:block">
+          {/* Colonne droite (desktop) — carte de score + barème, sticky.
+              Le barème par critère (caché en mobile dans la colonne principale)
+              vit ici sur desktop pour ne pas disparaître. */}
+          <aside className="ld-reveal hidden md:sticky md:top-[92px] md:flex md:flex-col md:gap-[24px]">
             {scoreCard}
+            <SectionCard title="Score global" icon={<PieIcon />}>
+              <ScoreBreakdown rows={score_breakdown} />
+            </SectionCard>
           </aside>
         </div>
       </main>
@@ -283,9 +279,9 @@ export function AuditResults({ results }: Props) {
       <footer className="w-full bg-[#936bff] px-[16px] py-[64px] md:px-10">
         <div className="mx-auto flex w-full max-w-[1200px] flex-col items-start gap-[24px]">
           <nav className="flex items-center gap-[24px]">
-            {["À propos", "Aide", "Contact"].map((l) => (
-              <a key={l} href="#" className="font-['Inter',var(--font-landing-body)] text-[16px] leading-[24px] text-[#eee] transition-colors hover:text-white">
-                {l}
+            {[{ label: "Accueil", href: "/" }, { label: "Mentions légales", href: "/mentions-legales" }].map((l) => (
+              <a key={l.label} href={l.href} className="font-['Inter',var(--font-landing-body)] text-[16px] leading-[24px] text-[#eee] transition-colors hover:text-white">
+                {l.label}
               </a>
             ))}
           </nav>
@@ -341,13 +337,11 @@ function EmptyNote({ children }: { children: React.ReactNode }) {
 function ScoreResultCard({
   score,
   animScore,
-  coverage,
   onDownload,
   pdfBusy,
 }: {
   score: number;
   animScore: number;
-  coverage?: Coverage;
   onDownload: () => void;
   pdfBusy: boolean;
 }) {
@@ -363,7 +357,6 @@ function ScoreResultCard({
           Avec les informations disponibles, le profil présente un score de
           crédibilité de {score}%.
         </p>
-        <CoverageLine coverage={coverage} />
       </div>
       <button
         type="button"
@@ -393,7 +386,9 @@ function ScoreResultCard({
 }
 
 /**
- * Anneau de score — frange turquoise/grise sur 180px, centre 150px.
+ * Anneau de score — frange colorée par le verdict (rouge < 40, orange < 70,
+ * vert ≥ 70) sur 180px, centre 150px. La couleur de l'anneau ET du chiffre
+ * suivent le score : un faible score est rouge, pas vert.
  * `onSurface` adapte le centre au fond clair (--ld) plutôt qu'au violet.
  */
 function ScoreRing({ score, onSurface }: { score: number; onSurface?: boolean }) {
@@ -401,6 +396,8 @@ function ScoreRing({ score, onSurface }: { score: number; onSurface?: boolean })
   const circ = 2 * Math.PI * r;
   const dash = (score / 100) * circ;
   const track = onSurface ? "var(--ld-border-solid)" : "rgba(255,255,255,0.35)";
+  // Couleur du verdict, dérivée du score (cf. seuils du barème).
+  const ringColor = scoreColor(score);
 
   return (
     <div className="relative size-[180px] shrink-0" role="img" aria-label={`Score de crédibilité : ${score}%`}>
@@ -411,14 +408,21 @@ function ScoreRing({ score, onSurface }: { score: number; onSurface?: boolean })
           cy="90"
           r={r}
           fill="none"
-          stroke="#0cdda5"
+          stroke={ringColor}
           strokeWidth="12"
           strokeLinecap="round"
           strokeDasharray={`${dash} ${circ}`}
         />
       </svg>
       <div className="absolute inset-[15px] flex items-center justify-center rounded-full border-[3px] border-[var(--ld-border-solid)] bg-[var(--ld-surface-alt)]">
-        <span className="num font-landing-body text-[48px] font-black leading-none text-[var(--ld-score)]">{score}%</span>
+        {/* Score en mono tabulaire (Geist Mono) — marqueur du fait mesuré, cf. DESIGN.md.
+            Couleur = celle de l'anneau qui l'entoure. */}
+        <span
+          className="font-[family-name:var(--font-mono)] text-[48px] font-medium leading-none tabular-nums tracking-[-0.03em]"
+          style={{ color: ringColor }}
+        >
+          {score}<span className="text-[28px]">%</span>
+        </span>
       </div>
     </div>
   );
@@ -433,14 +437,15 @@ function ScoreBadge({ score }: { score: number }) {
   const r = 20;
   const circ = 2 * Math.PI * r;
   const dash = (score / 100) * circ;
+  const ringColor = scoreColor(score);
   return (
     <div className="relative size-[48px] shrink-0" role="img" aria-label={`Score : ${score}%`}>
       <svg width="48" height="48" viewBox="0 0 48 48" className="absolute inset-0 -rotate-90" aria-hidden="true">
         <circle cx="24" cy="24" r={r} fill="none" stroke="rgba(255,255,255,0.35)" strokeWidth="4" />
-        <circle cx="24" cy="24" r={r} fill="none" stroke="#0cdda5" strokeWidth="4" strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} />
+        <circle cx="24" cy="24" r={r} fill="none" stroke={ringColor} strokeWidth="4" strokeLinecap="round" strokeDasharray={`${dash} ${circ}`} />
       </svg>
       <div className="absolute inset-[5px] flex items-center justify-center rounded-full bg-[#f6f6f6]">
-        <span className="num font-landing-body text-[13px] font-black leading-none text-[#0a7a59]">{score}%</span>
+        <span className="font-[family-name:var(--font-mono)] text-[13px] font-semibold leading-none tabular-nums tracking-[-0.02em]" style={{ color: ringColor }}>{score}%</span>
       </div>
     </div>
   );
@@ -453,27 +458,31 @@ function ProfileBlock({
   photo,
   identity,
   entity,
+  ringColor,
 }: {
   name: string;
   photo: string | null;
   identity: Record<string, unknown> | null | undefined;
   entity: AuditResponse["entity"];
+  ringColor: string;
 }) {
+  // Grille de détails sous le Nom : 3 colonnes desktop (Statut/Siren/Activité,
+  // puis Date de création/Siret/Dirigeant), 1 colonne mobile. Cf. maquette Figma.
   const cells: { label: string; value: string }[] = [];
   if (identity) {
     if (identity.forme_juridique) cells.push({ label: "Statut", value: String(identity.forme_juridique) });
-    if (identity.date_creation) cells.push({ label: "Date de création", value: formatFrDate(String(identity.date_creation)) });
     if (entity.siren || identity.siren) cells.push({ label: "Siren", value: String(entity.siren ?? identity.siren) });
     if (identity.activite) cells.push({ label: "Activité", value: String(identity.activite) });
+    if (identity.date_creation) cells.push({ label: "Date de création", value: formatFrDate(String(identity.date_creation)) });
     if (identity.siret) cells.push({ label: "Siret", value: String(identity.siret) });
     if (identity.dirigeant) cells.push({ label: "Dirigeant", value: String(identity.dirigeant) });
   }
 
   return (
     <div className="flex flex-col gap-[16px] p-[16px] md:p-[24px]">
-      <div className="flex items-center gap-[24px] md:gap-[40px]">
-        {/* Photo cerclée turquoise */}
-        <div className="flex shrink-0 items-center rounded-full border-4 border-[#0cdda5] p-[10px]">
+      <div className="flex flex-col items-start gap-[24px] sm:flex-row sm:items-center sm:gap-[32px] md:gap-[40px]">
+        {/* Photo cerclée — couleur du verdict (suit le score) */}
+        <div className="flex shrink-0 items-center rounded-full border-4 p-[10px]" style={{ borderColor: ringColor }}>
           <div className="flex size-[100px] items-center justify-center overflow-hidden rounded-full border border-[#525252] bg-[var(--ld-bg)]">
             {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -493,19 +502,18 @@ function ProfileBlock({
             )}
           </div>
         </div>
+        {/* Nom + grille de détails à droite de la photo */}
         <div className="flex min-w-0 flex-1 flex-col gap-[16px]">
           <InfoCell label="Nom" value={name} strong />
-          {!!identity?.forme_juridique && <InfoCell label="Statut" value={String(identity.forme_juridique)} />}
-          {!!identity?.date_creation && <InfoCell label="Date de création" value={formatFrDate(String(identity.date_creation))} />}
+          {cells.length > 0 && (
+            <div className="grid grid-cols-1 gap-x-[32px] gap-y-[16px] sm:grid-cols-2 lg:grid-cols-3">
+              {cells.map((c) => (
+                <InfoCell key={c.label} label={c.label} value={c.value} />
+              ))}
+            </div>
+          )}
         </div>
       </div>
-      {cells.length > 2 && (
-        <div className="grid grid-cols-2 gap-x-[26px] gap-y-[16px]">
-          {cells.slice(2).map((c) => (
-            <InfoCell key={c.label} label={c.label} value={c.value} />
-          ))}
-        </div>
-      )}
       {!identity && (
         <p className="font-landing-body text-[12px] leading-relaxed text-[var(--ld-text-faint)]">
           Aucune entreprise identifiée dans les bases publiques consultées. Ne
@@ -563,19 +571,6 @@ function AlertBanner({ alerts }: { alerts?: ScoreAlert[] }) {
   );
 }
 
-function CoverageLine({ coverage }: { coverage?: Coverage }) {
-  if (!coverage) return null;
-  const color =
-    coverage.confidence === "élevée" ? VERDICT.good :
-    coverage.confidence === "moyenne" ? VERDICT.warn : VERDICT.bad;
-  return (
-    <p className="text-center font-landing-body text-[12px] text-[var(--ld-text-faint)]">
-      Score basé sur {coverage.evaluated}/{coverage.total} sources ·{" "}
-      <span style={{ color }}>confiance {coverage.confidence}</span>
-    </p>
-  );
-}
-
 function platformLabel(platform: string): string {
   const p = platform.toLowerCase();
   if (p.includes("instagram")) return "Instagram";
@@ -599,9 +594,19 @@ function SocialRow({ hit, last }: { hit: SocialHit; last?: boolean }) {
   return (
     <div className={`flex items-center justify-between gap-3 px-[8px] py-[16px] ${last ? "" : "border-b border-[var(--ld-border-solid)]"}`}>
       <div className="flex min-w-0 items-center gap-3">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[var(--ld-surface)]">
-          <SocialIcon platform={hit.platform} />
-        </div>
+        {hasFullDiscIcon(hit.platform) ? (
+          // Logo officiel à disque complet (Instagram, TikTok) : pas de pastille.
+          <div className="size-9 shrink-0 overflow-hidden rounded-full">
+            <SocialIcon platform={hit.platform} />
+          </div>
+        ) : (
+          <div
+            className="flex size-9 shrink-0 items-center justify-center rounded-full"
+            style={{ background: verdictWash(platformColor(hit.platform)) }}
+          >
+            <SocialIcon platform={hit.platform} />
+          </div>
+        )}
         <div className="flex min-w-0 flex-col">
           <span className="font-landing-body text-[14px] font-medium text-[var(--ld-text)]">{label}</span>
           <span className="flex items-center gap-2 truncate font-landing-body text-[12px] text-[var(--ld-text-faint)]">
@@ -635,24 +640,57 @@ function SocialRow({ hit, last }: { hit: SocialHit; last?: boolean }) {
   );
 }
 
+/** Plateformes dont l'icône est un disque complet (fond + bord intégrés) :
+ *  elle remplit la pastille sans fond teinté par-dessus. */
+function hasFullDiscIcon(platform: string): boolean {
+  const p = platform.toLowerCase();
+  return p.includes("instagram") || p.includes("tiktok") || p.includes("youtube") || p.includes("x") || p.includes("twitter");
+}
+
+/** Couleur de marque par plateforme — teinte le pastille et le glyphe (cf. Figma). */
+function platformColor(platform: string): string {
+  const p = platform.toLowerCase();
+  if (p.includes("instagram")) return "#e1306c";
+  if (p.includes("tiktok")) return "#010101";
+  if (p.includes("youtube")) return "#f00000";
+  if (p.includes("x") || p.includes("twitter")) return "#010101";
+  return "var(--ld-text)";
+}
+
 function SocialIcon({ platform }: { platform: string }) {
   const p = platform.toLowerCase();
   if (p.includes("instagram")) return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <rect x="2" y="2" width="20" height="20" rx="5" stroke="#936bff" strokeWidth="1.6" />
-      <circle cx="12" cy="12" r="4" stroke="#936bff" strokeWidth="1.6" />
-      <circle cx="17.5" cy="6.5" r="1.1" fill="#936bff" />
+    <svg viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="size-full">
+      <rect x="0.5" y="0.5" width="32" height="32" rx="16" fill="url(#ig_grad)" />
+      <path d="M13.14 8.5H19.86C22.42 8.5 24.5 10.58 24.5 13.14V19.86C24.5 21.0906 24.0111 22.2708 23.141 23.141C22.2708 24.0111 21.0906 24.5 19.86 24.5H13.14C10.58 24.5 8.5 22.42 8.5 19.86V13.14C8.5 11.9094 8.98886 10.7292 9.85902 9.85902C10.7292 8.98886 11.9094 8.5 13.14 8.5ZM12.98 10.1C12.2162 10.1 11.4836 10.4034 10.9435 10.9435C10.4034 11.4836 10.1 12.2162 10.1 12.98V20.02C10.1 21.612 11.388 22.9 12.98 22.9H20.02C20.7838 22.9 21.5164 22.5966 22.0565 22.0565C22.5966 21.5164 22.9 20.7838 22.9 20.02V12.98C22.9 11.388 21.612 10.1 20.02 10.1H12.98ZM20.7 11.3C20.9652 11.3 21.2196 11.4054 21.4071 11.5929C21.5946 11.7804 21.7 12.0348 21.7 12.3C21.7 12.5652 21.5946 12.8196 21.4071 13.0071C21.2196 13.1946 20.9652 13.3 20.7 13.3C20.4348 13.3 20.1804 13.1946 19.9929 13.0071C19.8054 12.8196 19.7 12.5652 19.7 12.3C19.7 12.0348 19.8054 11.7804 19.9929 11.5929C20.1804 11.4054 20.4348 11.3 20.7 11.3ZM16.5 12.5C17.5609 12.5 18.5783 12.9214 19.3284 13.6716C20.0786 14.4217 20.5 15.4391 20.5 16.5C20.5 17.5609 20.0786 18.5783 19.3284 19.3284C18.5783 20.0786 17.5609 20.5 16.5 20.5C15.4391 20.5 14.4217 20.0786 13.6716 19.3284C12.9214 18.5783 12.5 17.5609 12.5 16.5C12.5 15.4391 12.9214 14.4217 13.6716 13.6716C14.4217 12.9214 15.4391 12.5 16.5 12.5ZM16.5 14.1C15.8635 14.1 15.253 14.3529 14.8029 14.8029C14.3529 15.253 14.1 15.8635 14.1 16.5C14.1 17.1365 14.3529 17.747 14.8029 18.1971C15.253 18.6471 15.8635 18.9 16.5 18.9C17.1365 18.9 17.747 18.6471 18.1971 18.1971C18.6471 17.747 18.9 17.1365 18.9 16.5C18.9 15.8635 18.6471 15.253 18.1971 14.8029C17.747 14.3529 17.1365 14.1 16.5 14.1Z" fill="#F6F6F6" />
+      <defs>
+        <linearGradient id="ig_grad" x1="0.5" y1="32.5" x2="32.5" y2="0.5" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#FFC100" />
+          <stop offset="0.35" stopColor="#FF0041" />
+          <stop offset="0.65" stopColor="#FF00B0" />
+          <stop offset="1" stopColor="#8C2EF5" />
+        </linearGradient>
+      </defs>
     </svg>
   );
   if (p.includes("tiktok")) return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <path d="M9 12a4 4 0 1 0 4 4V4c.333 1.333 1.6 4 4 4" stroke="var(--ld-text)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="size-full">
+      <rect x="0.5" y="0.5" width="32" height="32" rx="16" fill="black" />
+      <path d="M22.8996 13.9018V16.286C22.4831 16.2453 21.9418 16.1506 21.3431 15.9312C20.5612 15.6446 19.9793 15.2527 19.5981 14.9492V19.768L19.5884 19.753C19.5946 19.8485 19.5981 19.9458 19.5981 20.044C19.5981 22.4371 17.6515 24.3851 15.2583 24.3851C12.8651 24.3851 10.9185 22.4371 10.9185 20.044C10.9185 17.651 12.8651 15.7021 15.2583 15.7021C15.4927 15.7021 15.7226 15.7207 15.9473 15.7569V18.1066C15.7315 18.0296 15.4998 17.9881 15.2583 17.9881C14.1254 17.9881 13.2029 18.9099 13.2029 20.044C13.2029 21.1782 14.1254 22.1 15.2583 22.1C16.3912 22.1 17.3137 21.1773 17.3137 20.044C17.3137 20.0016 17.3128 19.9591 17.3101 19.9167V10.5524H19.6919C19.7007 10.7541 19.7087 10.9576 19.7175 11.1593C19.7334 11.5565 19.8749 11.9378 20.1217 12.2501C20.4109 12.6172 20.838 13.0437 21.4377 13.3842C21.9993 13.7027 22.5264 13.839 22.8996 13.9035V13.9018Z" fill="#FF004F" />
+      <path d="M22.0807 11.9661V14.3503C21.6641 14.3096 21.1229 14.2149 20.5241 13.9956C19.7423 13.7089 19.1604 13.317 18.7792 13.0136V17.8324L18.7695 17.8173C18.7757 17.9129 18.7792 18.0102 18.7792 18.1084C18.7792 20.5014 16.8326 22.4495 14.4394 22.4495C12.0462 22.4495 10.0996 20.5014 10.0996 18.1084C10.0996 15.7154 12.0462 13.7664 14.4394 13.7664C14.6738 13.7664 14.9037 13.785 15.1284 13.8213V16.171C14.9126 16.094 14.6808 16.0524 14.4394 16.0524C13.3065 16.0524 12.384 16.9742 12.384 18.1084C12.384 19.2425 13.3065 20.1644 14.4394 20.1644C15.5723 20.1644 16.4948 19.2416 16.4948 18.1084C16.4948 18.0659 16.4939 18.0235 16.4912 17.981V8.61499H18.8729C18.8818 8.81669 18.8898 9.02017 18.8986 9.22187C18.9145 9.61909 19.056 10.0004 19.3028 10.3127C19.592 10.6798 20.0191 11.1062 20.6188 11.4468C21.1804 11.7644 21.7075 11.9015 22.0807 11.9661Z" fill="#00F7EF" />
+      <path d="M22.6016 13.0083V15.3925C22.1851 15.3518 21.6438 15.2571 21.0451 15.0377C20.2632 14.7511 19.6813 14.3592 19.3001 14.0557V18.8745L19.2904 18.8595C19.2966 18.955 19.3001 19.0523 19.3001 19.1505C19.3001 21.5436 17.3535 23.4916 14.9603 23.4916C12.5671 23.4916 10.6205 21.5436 10.6205 19.1505C10.6205 16.7575 12.5671 14.8086 14.9603 14.8086C15.1947 14.8086 15.4246 14.8271 15.6493 14.8634V17.2131C15.4335 17.1361 15.2018 17.0946 14.9603 17.0946C13.8274 17.0946 12.905 18.0164 12.905 19.1505C12.905 20.2847 13.8274 21.2065 14.9603 21.2065C16.0932 21.2065 17.0157 20.2838 17.0157 19.1505C17.0157 19.1081 17.0148 19.0656 17.0121 19.0231V9.65891H19.3939C19.4027 9.86061 19.4107 10.0641 19.4195 10.2658C19.4354 10.663 19.5769 11.0443 19.8237 11.3566C20.1129 11.7237 20.5401 12.1501 21.1397 12.4907C21.7013 12.8083 22.2284 12.9455 22.6016 13.01V13.0083Z" fill="#DCDCDC" />
     </svg>
   );
   if (p.includes("youtube")) return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-      <rect x="2" y="5" width="20" height="14" rx="4" stroke="#f84b5f" strokeWidth="1.6" />
-      <path d="M10 9.5L15 12L10 14.5V9.5Z" fill="#f84b5f" />
+    <svg viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="size-full">
+      <rect x="0.5" y="0.5" width="32" height="32" rx="16" fill="#FF0209" />
+      <path fillRule="evenodd" clipRule="evenodd" d="M20.683 22.0803C21.048 22.0812 21.4289 22.0741 21.8009 22.0338C22.5327 21.9539 23.2312 21.7441 23.7016 21.2017C24.1763 20.6548 24.2974 19.8929 24.3702 19.1723C24.5457 17.4247 24.5431 15.6587 24.3632 13.9111C24.2658 12.9622 24.0543 11.9133 23.276 11.3621C22.6731 10.9346 21.8799 10.9197 21.141 10.9197C19.9599 10.921 18.7784 10.9218 17.597 10.9229C17.2143 10.9233 16.8317 10.9236 16.4491 10.9241C15.7107 10.9249 14.9724 10.9256 14.2341 10.9262C13.4684 10.9269 12.7027 10.9276 11.937 10.9285C11.853 10.9286 11.7692 10.9278 11.6859 10.927C11.1458 10.9221 10.6199 10.9174 10.1145 11.1523C9.61252 11.3858 9.22029 11.8299 8.98512 12.3241C8.65782 13.0122 8.5885 13.7908 8.54901 14.5509C8.47704 15.9352 8.48407 17.3229 8.57183 18.7062C8.635 19.7156 8.79734 20.8313 9.57742 21.4746C10.2698 22.0443 11.2455 22.0733 12.1415 22.0733C14.988 22.075 17.8355 22.0777 20.683 22.0803ZM19.0464 16.5013L14.8029 14.0506V18.952L19.0464 16.5013Z" fill="#F6F6F6" />
+    </svg>
+  );
+  if (p.includes("x") || p.includes("twitter")) return (
+    <svg viewBox="0 0 33 33" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="size-full">
+      <circle cx="16.5" cy="16.5" r="16.5" fill="black" />
+      <path d="M22.0113 7.5H24.9237L18.5292 14.7809L26 24.6576H20.1373L15.5472 18.6556L10.2922 24.6576H7.37987L14.1543 16.8702L7 7.5H13.0083L17.1553 12.9828L22.0113 7.5ZM20.992 22.9482H22.6065L12.1599 9.14612H10.4252L20.992 22.9482Z" fill="white" />
     </svg>
   );
   return <span className="font-landing-body text-[13px] font-bold text-[var(--ld-text)]">{platform[0]?.toUpperCase()}</span>;
@@ -1032,14 +1070,6 @@ function formatFrDate(raw: string): string {
 
 /* ---- Icônes inline (currentColor sauf logo) ---- */
 
-function ChevronLeftIcon() {
-  return (
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14 16L10 12L14 8" />
-    </svg>
-  );
-}
-
 function MoreIcon() {
   return (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -1169,16 +1199,3 @@ function SearchIcon() {
   );
 }
 
-function UnmaskLogo() {
-  return (
-    <svg width="80" height="14" viewBox="0 0 66 17" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Unmask" className="h-[14px] w-[80px]">
-      <path d="M10.3809 11.7657V7.18792C10.3809 4.65809 12.489 2.59006 15.059 2.59006C17.6491 2.59006 19.7573 4.65809 19.7573 7.18792V11.7657H17.2877V6.98714C17.2877 5.80254 16.2838 4.81872 15.059 4.81872C13.8343 4.81872 12.8504 5.80254 12.8504 6.98714V11.7657H10.3809ZM27.0997 11.7657V6.7462C27.0997 5.70215 26.1962 4.81872 25.112 4.81872C24.0278 4.81872 23.1443 5.70215 23.1443 6.7462V11.7657H20.6747V6.94698C20.6747 4.5577 22.6625 2.59006 25.112 2.59006C26.2564 2.59006 27.3406 3.03178 28.1839 3.79474L28.3244 3.93529L28.4851 3.79474C29.3083 3.03178 30.3925 2.59006 31.5369 2.59006C33.9864 2.59006 35.9942 4.5577 35.9942 6.94698V11.7657H33.5246V6.7462C33.5246 5.70215 32.6412 4.81872 31.5369 4.81872C30.4527 4.81872 29.5693 5.70215 29.5693 6.7462V11.7657H27.0997Z" fill="#eee"/>
-      <path d="M43.8968 9.33626C44.2983 8.9347 44.5594 8.39259 44.6397 7.85049C44.9007 6.14386 43.8365 4.5577 41.9894 4.5577C40.865 4.5577 39.9213 5.18012 39.4997 6.2041C39.2186 6.88675 39.2186 7.77018 39.4997 8.45283C39.7808 9.1154 40.2627 9.63743 40.9453 9.91852C41.5477 10.1595 42.2504 10.1795 42.8728 9.97875C43.2543 9.85829 43.6157 9.63743 43.8968 9.33626ZM47.0691 11.7657H44.6397V11.083L44.2983 11.3039C43.5555 11.7858 42.7523 12.0468 41.8689 12.0468C41.126 12.0669 40.4233 11.9665 39.7607 11.6854C39.1785 11.4444 38.6564 11.1031 38.2147 10.6614C37.3313 9.77797 36.9096 8.5733 36.9096 7.32846C36.9096 5.36082 38.0541 3.71443 39.9013 2.97154C41.1662 2.4696 42.7925 2.4696 44.0373 2.97154C45.9046 3.71443 47.0691 5.36082 47.0691 7.32846V11.7657Z" fill="#fff"/>
-      <path d="M9.37641 2.89123V7.46901C9.37641 9.99883 7.26822 12.0669 4.67817 12.0669C2.10819 12.0669 0 9.99883 0 7.46901V2.89123H2.46959V7.66979C2.46959 8.85439 3.45341 9.83821 4.67817 9.83821C5.90292 9.83821 6.90682 8.85439 6.90682 7.66979V2.89123H9.37641Z" fill="#eee"/>
-      <path d="M56.2927 6.38776e-06V7.20799L59.7461 2.91131L62.4967 2.89123L58.9429 7.32846L62.4967 11.7657L59.7461 11.7456L57.5776 9.03509L56.2927 10.6212V11.7657H53.8833V6.38776e-06H56.2927Z" fill="#fff"/>
-      <path d="M53.8487 8.99166C53.9325 9.195 53.9889 9.40684 54.0796 9.61109L55.0307 4.72241C54.4791 5.19688 53.731 6.69746 52.8372 6.08736C52.0644 5.55984 51.858 4.60245 50.8366 4.31977C50.5347 4.2372 50.2172 4.23086 49.9123 4.30129C49.2255 4.45951 48.6494 5.01671 48.8306 5.75387C49.0637 6.70235 50.1596 6.86797 50.9559 7.00528C51.588 7.11427 52.3547 7.40461 52.871 7.7769C53.3031 8.08233 53.6418 8.50307 53.8487 8.99166Z" fill="#fff"/>
-      <path d="M46.7688 6.51376C46.76 6.41836 46.7596 6.28945 46.7598 6.10187L46.7688 6.51376C46.7975 6.82518 46.915 6.77968 47.3863 7.25317C47.9064 7.77555 48.5835 8.08411 49.2806 8.30801C50.1599 8.59042 51.1066 8.50247 51.7003 9.35929C51.8377 9.55746 51.921 9.8236 51.9218 10.0638C51.9253 10.3398 51.8186 10.6057 51.6256 10.8021C51.2989 11.131 50.8386 11.272 50.3864 11.2688C49.9085 11.2654 49.4783 11.1235 49.1391 10.7791C48.6584 10.291 48.5234 9.52517 47.8227 9.27289C47.4744 9.1475 47.118 9.0913 46.8319 9.38995L46.7688 6.51376Z" fill="#fff"/>
-      <circle cx="64.087" cy="10.9164" r="1.13043" fill="#eee"/>
-    </svg>
-  );
-}

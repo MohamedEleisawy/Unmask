@@ -1,86 +1,73 @@
 "use client";
 
-import { useState } from "react";
+import type { ReactNode } from "react";
 import { ThemeToggle } from "@/shared/ThemeToggle";
 
-/** Liens du menu — un seul point d'entrée : l'accueil. */
-const MENU_LINKS = [{ label: "Accueil", href: "/" }];
-
 /**
- * Navbar de la landing — barre violette (#936bff) reprise de la maquette Figma
- * (node 963:3172, h 68px). Logo à gauche, puis ThemeToggle ET menu hamburger
- * (les deux conservés). Le hamburger ouvre la navigation.
+ * Navbar partagée des écrans d'audit (confirmation, chargement, résultat et
+ * recherche). Une seule barre pour les quatre phases : bouton retour identique
+ * à GAUCHE, logo Unmask, bascule de thème à droite. Garantit la cohérence
+ * demandée — même bouton retour, même position, partout.
+ *
+ * `onBack` : action du bouton retour (par défaut, retour accueil via le parent).
+ * `center` / `right` : emplacements optionnels (badge de score épinglé, action
+ * PDF) injectés par l'écran de résultat sans casser la disposition commune.
  */
-export function LandingNavbar() {
-  const [open, setOpen] = useState(false);
-
+export function AuditNavbar({
+  onBack,
+  backLabel = "Revenir à l'accueil",
+  center,
+  right,
+}: {
+  onBack: () => void;
+  backLabel?: string;
+  center?: ReactNode;
+  right?: ReactNode;
+}) {
   return (
-    <header className="w-full bg-[#936bff]" data-node-id="963:3172">
-      {/* Mobile : largeur 342px (Figma node 963:3173). Desktop : conteneur 1200px. */}
-      <div className="mx-auto flex h-[68px] w-full max-w-[342px] items-center justify-between px-0 py-[22px] md:h-[72px] md:max-w-[1200px] md:px-10 md:py-0">
-        <LandingLogo />
+    <header
+      className="sticky top-0 z-[var(--z-sticky)] w-full bg-[#936bff]"
+    >
+      <div className="mx-auto flex h-[68px] w-full max-w-[1200px] items-center justify-between gap-[12px] px-[24px] md:px-10">
+        {/* Bouton retour — toujours à gauche, toujours le même (chevron, carré clair). */}
+        <BackButton onClick={onBack} label={backLabel} />
 
-        {/* Liens inline — desktop uniquement, sur une seule ligne */}
-        <nav className="hidden items-center gap-8 md:flex">
-          {MENU_LINKS.map((link) => (
-            <a
-              key={link.label}
-              href={link.href}
-              className="font-landing-body text-[16px] text-[#eee] transition-opacity hover:opacity-80"
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
+        {/* Centre : logo (et, sur résultat mobile, badge de score épinglé). */}
+        <div className="flex min-w-0 flex-1 items-center justify-center gap-[12px]">
+          <UnmaskLogo />
+          {center}
+        </div>
 
-        <div className="flex items-center gap-2">
+        {/* Droite : bascule de thème + actions éventuelles de l'écran. */}
+        <div className="flex shrink-0 items-center gap-[10px]">
+          {right}
           <ThemeToggle />
-          {/* Hamburger — mobile uniquement */}
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
-            aria-expanded={open}
-            className="tap-target flex size-6 items-center justify-center text-[#eee] transition-opacity active:scale-95 md:hidden"
-          >
-            {/* Menu / Hamburger_MD — Figma node 963:3183 */}
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-              {open ? (
-                <path d="M6 6l12 12M18 6L6 18" />
-              ) : (
-                <path d="M5 7h14M5 12h14M5 17h14" />
-              )}
-            </svg>
-          </button>
         </div>
       </div>
-
-      {/* Panneau du menu — révélé par le hamburger (mobile uniquement) */}
-      {open && (
-        <nav className="mx-auto w-full max-w-[342px] pb-4 md:hidden">
-          <ul className="flex flex-col gap-1">
-            {MENU_LINKS.map((link) => (
-              <li key={link.label}>
-                <a
-                  href={link.href}
-                  onClick={() => setOpen(false)}
-                  className="block rounded-[12px] px-3 py-2 font-landing-body text-[16px] text-[#eee] transition-colors hover:bg-white/10"
-                >
-                  {link.label}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      )}
     </header>
   );
 }
 
-/** Logo Unmask — forcé en blanc sur la barre violette. */
-function LandingLogo() {
+/** Bouton retour standard — chevron gauche, carré clair. Identique sur tous les écrans. */
+export function BackButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
-    <svg width="76" height="14" viewBox="0 0 66 17" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Unmask" className="h-[18px] w-[98px] md:h-[22px] md:w-[120px]">
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className="tap-target flex size-[40px] shrink-0 items-center justify-center rounded-[12px] bg-[#e7e7e7] text-[#101010] transition-transform active:scale-95"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M14 16L10 12L14 8" />
+      </svg>
+    </button>
+  );
+}
+
+/** Logo Unmask en blanc sur la barre violette — agrandi (96×25 px). */
+export function UnmaskLogo() {
+  return (
+    <svg width="96" height="25" viewBox="0 0 66 17" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Unmask" className="h-[25px] w-[96px] shrink-0">
       <path d="M10.3809 11.7657V7.18792C10.3809 4.65809 12.489 2.59006 15.059 2.59006C17.6491 2.59006 19.7573 4.65809 19.7573 7.18792V11.7657H17.2877V6.98714C17.2877 5.80254 16.2838 4.81872 15.059 4.81872C13.8343 4.81872 12.8504 5.80254 12.8504 6.98714V11.7657H10.3809ZM27.0997 11.7657V6.7462C27.0997 5.70215 26.1962 4.81872 25.112 4.81872C24.0278 4.81872 23.1443 5.70215 23.1443 6.7462V11.7657H20.6747V6.94698C20.6747 4.5577 22.6625 2.59006 25.112 2.59006C26.2564 2.59006 27.3406 3.03178 28.1839 3.79474L28.3244 3.93529L28.4851 3.79474C29.3083 3.03178 30.3925 2.59006 31.5369 2.59006C33.9864 2.59006 35.9942 4.5577 35.9942 6.94698V11.7657H33.5246V6.7462C33.5246 5.70215 32.6412 4.81872 31.5369 4.81872C30.4527 4.81872 29.5693 5.70215 29.5693 6.7462V11.7657H27.0997Z" fill="#eee"/>
       <path d="M43.8968 9.33626C44.2983 8.9347 44.5594 8.39259 44.6397 7.85049C44.9007 6.14386 43.8365 4.5577 41.9894 4.5577C40.865 4.5577 39.9213 5.18012 39.4997 6.2041C39.2186 6.88675 39.2186 7.77018 39.4997 8.45283C39.7808 9.1154 40.2627 9.63743 40.9453 9.91852C41.5477 10.1595 42.2504 10.1795 42.8728 9.97875C43.2543 9.85829 43.6157 9.63743 43.8968 9.33626ZM47.0691 11.7657H44.6397V11.083L44.2983 11.3039C43.5555 11.7858 42.7523 12.0468 41.8689 12.0468C41.126 12.0669 40.4233 11.9665 39.7607 11.6854C39.1785 11.4444 38.6564 11.1031 38.2147 10.6614C37.3313 9.77797 36.9096 8.5733 36.9096 7.32846C36.9096 5.36082 38.0541 3.71443 39.9013 2.97154C41.1662 2.4696 42.7925 2.4696 44.0373 2.97154C45.9046 3.71443 47.0691 5.36082 47.0691 7.32846V11.7657Z" fill="#fff"/>
       <path d="M9.37641 2.89123V7.46901C9.37641 9.99883 7.26822 12.0669 4.67817 12.0669C2.10819 12.0669 0 9.99883 0 7.46901V2.89123H2.46959V7.66979C2.46959 8.85439 3.45341 9.83821 4.67817 9.83821C5.90292 9.83821 6.90682 8.85439 6.90682 7.66979V2.89123H9.37641Z" fill="#eee"/>
