@@ -4,6 +4,7 @@ import {
   IconTrendingUp,
   IconLock,
 } from "@/features/landing/landingIcons";
+import { Reveal } from "@/features/landing/Reveal";
 
 type Criterion = {
   icon: (p: { className?: string }) => React.ReactElement;
@@ -49,7 +50,7 @@ export function LandingHowItWorks() {
   return (
     <section id="how" className="flex w-full flex-col gap-[32px] md:gap-12" data-node-id="963:3237">
       {/* En-tête — padding latéral 18px (Figma node 963:3238). Desktop : centré. */}
-      <div className="mx-auto flex w-full max-w-[354px] flex-col items-start gap-[8px] px-[18px] md:max-w-[1200px] md:items-center md:px-10 md:text-center">
+      <Reveal as="div" className="mx-auto flex w-full max-w-[354px] flex-col items-start gap-[8px] px-[18px] md:max-w-[1200px] md:items-center md:px-10 md:text-center">
         <h2 className="font-landing-display text-[32px] leading-[32px] tracking-[0.0703px] text-[var(--ld-text)] md:text-[48px] md:leading-[48px]">
           Comment calculons-nous{" "}
           <span className="text-[#936bff]">l&apos;indice de confiance</span> ?
@@ -57,14 +58,16 @@ export function LandingHowItWorks() {
         <p className="max-w-[320px] font-landing-body text-[14px] leading-[20px] tracking-[-0.1504px] text-[var(--ld-text-muted)] md:max-w-[520px] md:text-[16px] md:leading-[24px]">
           Notre méthodologie repose sur des informations publiques et vérifiables.
         </p>
-      </div>
+      </Reveal>
 
       {/* Bloc surface pleine largeur, padding x24 y48 (Figma node 963:3242). */}
       <div className="w-full bg-[var(--ld-surface)] px-[24px] py-[48px] md:py-16">
         {/* Mobile : liste verticale. Desktop : grille 2 colonnes. */}
         <div className="mx-auto grid w-full max-w-[342px] grid-cols-1 gap-[16px] md:max-w-[1000px] md:grid-cols-2 md:gap-x-12 md:gap-y-10">
-          {CRITERIA.map((c) => (
-            <CriterionRow key={c.title} {...c} />
+          {CRITERIA.map((c, i) => (
+            <Reveal key={c.title} delay={i * 60}>
+              <CriterionRow {...c} />
+            </Reveal>
           ))}
         </div>
       </div>

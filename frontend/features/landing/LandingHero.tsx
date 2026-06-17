@@ -65,7 +65,7 @@ export function LandingHero() {
         {/* Colonne contenu */}
         <div className="flex flex-col items-start gap-[24px] md:max-w-[560px]">
           {/* Titre + paragraphe (Figma node 963:3186, gap 16px) */}
-          <div className="flex flex-col items-start gap-[16px]">
+          <div className="ld-reveal flex flex-col items-start gap-[16px]">
             <h1 className="text-balance font-landing-display text-[48px] leading-[48px] tracking-[0.3516px] text-[var(--ld-text)] md:text-[56px] md:leading-[54px] md:tracking-[-0.5px] lg:text-[72px] lg:leading-[68px]">
               Un feed ne dit{" "}
               <span className="whitespace-nowrap">
@@ -86,7 +86,7 @@ export function LandingHero() {
           </div>
 
           {/* Formulaire de recherche — conservé, habillé marque. */}
-          <form onSubmit={handleSubmit} className="flex w-full flex-col items-start gap-3">
+          <form onSubmit={handleSubmit} className="ld-reveal flex w-full flex-col items-start gap-3" style={{ ["--reveal-delay" as string]: "90ms" }}>
             <PillField
               ref={nameRef}
               icon={<SearchIcon />}
@@ -126,16 +126,16 @@ export function LandingHero() {
             {/* Bouton « Vérifier un profil » — Figma node 963:3191 */}
             <button
               type="submit"
-              className="flex h-[36px] items-center justify-center gap-[6px] rounded-[12px] bg-[#936bff] px-[8px] font-landing-body text-[14px] leading-[20px] tracking-[-0.1504px] text-[#eee] transition-all hover:bg-[#7d54f0] active:-translate-y-px active:scale-[0.98] md:h-[44px] md:px-5 md:text-[15px]"
+              className="group flex h-[36px] items-center justify-center gap-[6px] rounded-[12px] bg-[#936bff] px-[8px] font-landing-body text-[14px] leading-[20px] tracking-[-0.1504px] text-[#eee] transition-[background-color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[#7d54f0] active:-translate-y-px active:scale-[0.98] md:h-[44px] md:px-5 md:text-[15px]"
             >
               Vérifier un profil
-              <IconArrowRight className="size-[16px]" />
+              <IconArrowRight className="size-[16px] transition-transform duration-150 ease-[var(--ease-out)] group-hover:translate-x-0.5" />
             </button>
           </form>
         </div>
 
         {/* Colonne asset — aperçu de rapport, desktop uniquement */}
-        <div className="hidden md:block">
+        <div className="ld-hero-in hidden md:block" style={{ ["--reveal-delay" as string]: "120ms", animationDelay: "120ms" }}>
           <HeroVisual />
         </div>
       </div>

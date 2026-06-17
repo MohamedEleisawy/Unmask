@@ -4,6 +4,7 @@ import {
   IconZap,
   IconShield,
 } from "@/features/landing/landingIcons";
+import { Reveal } from "@/features/landing/Reveal";
 
 type Feature = {
   icon: (p: { className?: string }) => React.ReactElement;
@@ -48,16 +49,20 @@ export function LandingFeaturesGrid() {
   return (
     <section className="w-full px-[24px] md:px-10" data-node-id="963:3196">
       <div className="mx-auto flex w-full max-w-[342px] flex-col items-start gap-[16px] md:max-w-[1200px] md:gap-10">
-        <h2 className="flex flex-wrap items-baseline gap-x-[0.28em] font-landing-display text-[32px] leading-[32px] tracking-[0.0703px] text-[var(--ld-text)] md:text-[48px] md:leading-[48px]">
-          <span>Pourquoi utiliser</span>
-          <UnmaskWordmark />
-          <span aria-hidden="true">?</span>
-        </h2>
+        <Reveal as="div">
+          <h2 className="flex flex-wrap items-baseline gap-x-[0.28em] font-landing-display text-[32px] leading-[32px] tracking-[0.0703px] text-[var(--ld-text)] md:text-[48px] md:leading-[48px]">
+            <span>Pourquoi utiliser</span>
+            <UnmaskWordmark />
+            <span aria-hidden="true">?</span>
+          </h2>
+        </Reveal>
 
         {/* Mobile : 2 colonnes (Figma node 963:3208). Desktop : 4 colonnes, une rangée. */}
         <div className="grid w-full grid-cols-2 gap-x-[16px] gap-y-[15px] md:grid-cols-4 md:gap-6">
-          {FEATURES.map((f) => (
-            <FeatureCard key={f.title} {...f} />
+          {FEATURES.map((f, i) => (
+            <Reveal key={f.title} as="article" delay={i * 60} className="h-full">
+              <FeatureCard {...f} />
+            </Reveal>
           ))}
         </div>
       </div>
@@ -67,7 +72,7 @@ export function LandingFeaturesGrid() {
 
 function FeatureCard({ icon: Icon, tint, title, body }: Feature) {
   return (
-    <article className="flex h-full flex-col items-start gap-[8px] rounded-[12px] bg-[var(--ld-surface)] p-[20px] shadow-[inset_0_0_0_1px_var(--ld-border)] transition-shadow md:hover:shadow-[0_16px_40px_rgba(37,20,29,0.08)]">
+    <div className="flex h-full flex-col items-start gap-[8px] rounded-[12px] bg-[var(--ld-surface)] p-[20px] shadow-[inset_0_0_0_1px_var(--ld-border)] transition-shadow md:hover:shadow-[0_16px_40px_rgba(37,20,29,0.08)]">
       {/* Pastille icône 40×40, fond = teinte @13% (Figma node 963:3210) */}
       <div
         className="flex size-[40px] items-center justify-center rounded-[12px]"
@@ -81,7 +86,7 @@ function FeatureCard({ icon: Icon, tint, title, body }: Feature) {
       <p className="font-landing-body text-[12px] leading-[19.5px] text-[var(--ld-text-muted)]">
         {body}
       </p>
-    </article>
+    </div>
   );
 }
 
