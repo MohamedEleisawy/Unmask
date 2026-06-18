@@ -1002,16 +1002,6 @@ function BlacklistCard({ data }: { data: PillarData | undefined }) {
           {present ? "Présent" : "Non présent"}
         </span>
       </div>
-      <div className="flex flex-col gap-2">
-        {["AMF"].map((l) => (
-          <div key={l} className="flex items-center justify-between">
-            <span className="font-landing-body text-[12px] text-[var(--ld-text-faint)]">{l}</span>
-            <span className="font-landing-body text-[12px] font-medium" style={{ color: present ? VERDICT.bad : VERDICT.good }}>
-              {present ? "Présent" : "Non présent"}
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
