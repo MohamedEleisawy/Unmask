@@ -21,9 +21,13 @@ GOOGLE_CSE_ID: str = os.getenv("GOOGLE_CSE_ID", "")
 SERPER_API_KEY: str = os.getenv("SERPER_API_KEY", "")
 
 # --- Déploiement ---
-# Origines autorisées par CORS. En dev, "*" est acceptable.
-# En prod, lister les URLs front exactes (ex. "https://unmask.vercel.app").
-ALLOWED_ORIGINS: list[str] = _csv_env("ALLOWED_ORIGINS", "*")
+# Origines autorisées par CORS. Jamais "*" : défaut sûr couvrant le front local
+# (dev) + le front Vercel (prod). Surchargeable via la variable d'env
+# ALLOWED_ORIGINS (CSV) sur l'hébergeur. Ne jamais réintroduire le wildcard.
+ALLOWED_ORIGINS: list[str] = _csv_env(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000,https://unmask-gamma.vercel.app",
+)
 
 # TTL du cache liste noire AMF (secondes). 6h par défaut.
 AMF_CACHE_TTL_SECONDS: int = int(os.getenv("AMF_CACHE_TTL_SECONDS", "21600"))

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { ThemeToggle } from "@/shared/ThemeToggle";
 
 /**
@@ -11,10 +13,11 @@ export function LandingNavbar() {
   return (
     <header className="w-full bg-[#936bff]" data-node-id="963:3172">
       {/* Mobile : largeur 342px (Figma node 963:3173). Desktop : conteneur 1200px. */}
-      <div className="mx-auto flex h-[68px] w-full max-w-[342px] items-center justify-between px-0 py-[22px] md:h-[72px] md:max-w-[1200px] md:px-10 md:py-0">
-        <a href="/" aria-label="Unmask — retour à l'accueil" className="flex shrink-0 items-center transition-opacity hover:opacity-80">
+      <div className="mx-auto flex h-[68px] w-full max-w-[342px] items-center justify-end px-0 py-[22px] md:h-[72px] md:max-w-[1200px] md:justify-between md:px-10 md:py-0">
+        {/* Logo masqué en mobile (maquette), visible à partir de md. */}
+        <Link href="/" aria-label="Unmask — retour à l'accueil" className="hidden shrink-0 items-center transition-opacity hover:opacity-80 md:flex">
           <LandingLogo />
-        </a>
+        </Link>
 
         <ThemeToggle />
       </div>

@@ -35,22 +35,19 @@ export function ProfileConfirm({
       {/* Navbar partagée — bouton retour à gauche, logo, bascule de thème. */}
       <AuditNavbar onBack={onReject} backLabel="Revenir en arrière" />
 
-      {/* Contenu — gap 32, padding latéral 32 (Figma node 963:3400) */}
-      <main className="flex flex-1 flex-col items-center justify-center gap-[32px] px-[32px] py-[48px]">
-        <h1 className="max-w-[382px] text-center font-landing-body text-[20px] font-bold leading-snug text-balance text-[var(--ld-text)]">
-          Est-ce bien le profil que vous souhaitez{" "}
-          <span className="text-[var(--ld-violet-ink)]">vérifier</span> ?
-        </h1>
-
-        {/* Carte profil (Figma node 963:3402) */}
+      {/* Contenu — mobile : pile centrée (question → carte → boutons). Desktop
+          (maquette node 1262:7405) : carte à gauche, colonne question + boutons
+          à droite, en rangée centrée avec un gap de 72px. */}
+      <main className="flex flex-1 flex-col items-center justify-center gap-[32px] px-[32px] py-[48px] md:flex-row md:gap-[72px]">
+        {/* Carte profil (Figma node 1262:7406) */}
         <section
           aria-label="Profil à vérifier"
-          className="flex w-full max-w-[326px] flex-col gap-[8px] rounded-[12px] bg-[var(--ld-surface)] p-[8px] shadow-[0_18px_50px_rgba(37,20,29,0.08)] md:max-w-[420px]"
+          className="order-2 flex w-full max-w-[326px] flex-col gap-[8px] rounded-[12px] bg-[var(--ld-surface)] p-[8px] shadow-[0_18px_50px_rgba(37,20,29,0.08)] md:order-1 md:max-w-[531px] md:gap-[10px] md:p-[10px]"
         >
           {/* Titre carte */}
           <div className="flex items-center gap-[8px] p-[8px]">
-            <UserCircleIcon className="size-[20px] text-[var(--ld-text-muted)]" />
-            <p className="font-landing-body text-[20px] font-medium leading-none text-[var(--ld-text-muted)]">
+            <UserCircleIcon className="size-[20px] text-[var(--ld-text-muted)] md:size-[24px]" />
+            <p className="font-landing-body text-[20px] font-medium leading-none text-[var(--ld-text-muted)] md:text-[24px]">
               Profil
             </p>
           </div>
@@ -58,11 +55,11 @@ export function ProfileConfirm({
           {/* Séparateur (Figma node 963:3409) */}
           <div className="h-[2px] w-full rounded-[9px] bg-[var(--ld-border-solid)]" aria-hidden="true" />
 
-          {/* Contenu : photo + infos (Figma node 963:3410) */}
-          <div className="flex items-center gap-[24px] p-[16px] md:gap-[40px]">
+          {/* Contenu : photo + infos (Figma node 1262:7414) */}
+          <div className="flex items-center gap-[24px] p-[16px] md:gap-[48px] md:p-[20px]">
             {/* Photo — anneau turquoise 4px, padding 10, image 100×100 ronde */}
-            <div className="flex shrink-0 items-center rounded-full border-4 border-[#0cdda5] p-[10px]">
-              <div className="flex size-[100px] items-center justify-center overflow-hidden rounded-full border border-[var(--ld-text-faint)] bg-[var(--ld-bg)]">
+            <div className="flex shrink-0 items-center rounded-full border-4 border-[#0cdda5] p-[10px] md:border-[5px] md:p-[12px]">
+              <div className="flex size-[100px] items-center justify-center overflow-hidden rounded-full border border-[var(--ld-text-faint)] bg-[var(--ld-bg)] md:size-[122px]">
                 {preview.image_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -83,18 +80,18 @@ export function ProfileConfirm({
             </div>
 
             {/* Colonne d'infos */}
-            <div className="flex min-w-0 flex-1 flex-col gap-[16px]">
+            <div className="flex min-w-0 flex-1 flex-col gap-[16px] md:gap-[20px]">
               <InfoBlock label="Nom" value={displayName} strong />
               {networks.length > 0 ? (
                 <div className="flex flex-col gap-[8px]">
-                  <p className="font-landing-body text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--ld-text-muted)]">
+                  <p className="font-landing-body text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--ld-text-muted)] md:text-[14px]">
                     Réseaux
                   </p>
                   <ul className="flex flex-wrap gap-[6px]">
                     {networks.map((n) => (
                       <li
                         key={n.platform}
-                        className="flex items-center gap-1 rounded-full bg-[#936bff]/12 px-2.5 py-1 font-landing-body text-[12px] font-medium text-[var(--ld-text)]"
+                        className="flex items-center gap-1 rounded-full bg-[#936bff]/12 px-2.5 py-1 font-landing-body text-[12px] font-medium text-[var(--ld-text)] md:text-[14px]"
                       >
                         {n.platform}
                         {n.official && <span className="text-[#0cdda5]" aria-label="officiel">✓</span>}
@@ -109,22 +106,33 @@ export function ProfileConfirm({
           </div>
         </section>
 
-        {/* Boutons Oui / Non (Figma node 963:3429) */}
-        <div className="flex w-full max-w-[326px] items-center justify-center gap-[10px] px-[32px] md:max-w-[420px]">
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="flex h-[38px] flex-1 items-center justify-center rounded-[12px] bg-[#936bff] px-[12px] py-[8px] font-landing-body text-[16px] font-bold text-[#eee] transition-[background-color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[#7d54f0] active:-translate-y-px active:scale-[0.98]"
-          >
-            Oui
-          </button>
-          <button
-            type="button"
-            onClick={onReject}
-            className="flex h-[38px] flex-1 items-center justify-center rounded-[12px] border border-[#936bff] px-[12px] py-[8px] font-landing-body text-[16px] font-bold text-[var(--ld-violet-ink)] transition-colors hover:bg-[#936bff]/8 active:scale-[0.98]"
-          >
-            Non
-          </button>
+        {/* Colonne question + actions. Sur mobile, `contents` fait remonter les
+            enfants dans le flux du main : l'ordre reste question (order-1) →
+            carte (order-2) → boutons (order-3). Sur desktop, devient une colonne
+            à droite de la carte (maquette node 1262:7433). */}
+        <div className="contents md:order-2 md:flex md:w-[382px] md:flex-col md:gap-[32px]">
+          <h1 className="order-1 max-w-[382px] text-center font-landing-body text-[20px] font-bold leading-snug text-balance text-[var(--ld-text)] md:order-none md:text-left md:text-[28px]">
+            Est-ce bien le profil que vous souhaitez{" "}
+            <span className="text-[var(--ld-violet-ink)]">vérifier</span> ?
+          </h1>
+
+          {/* Boutons Oui / Non — mobile : côte à côte ; desktop : empilés, pleine largeur. */}
+          <div className="order-3 flex w-full max-w-[326px] items-center justify-center gap-[10px] px-[32px] md:order-none md:max-w-none md:flex-col md:px-0">
+            <button
+              type="button"
+              onClick={onConfirm}
+              className="flex h-[38px] flex-1 items-center justify-center rounded-[12px] bg-[#936bff] px-[12px] py-[8px] font-landing-body text-[16px] font-bold text-[#eee] transition-[background-color,transform] duration-150 ease-[var(--ease-out)] hover:bg-[#7d54f0] active:-translate-y-px active:scale-[0.98] md:h-[44px] md:w-full md:flex-none"
+            >
+              Oui
+            </button>
+            <button
+              type="button"
+              onClick={onReject}
+              className="flex h-[38px] flex-1 items-center justify-center rounded-[12px] border border-[#936bff] px-[12px] py-[8px] font-landing-body text-[16px] font-bold text-[var(--ld-violet-ink)] transition-colors hover:bg-[#936bff]/8 active:scale-[0.98] md:h-[44px] md:w-full md:flex-none md:border-2"
+            >
+              Non
+            </button>
+          </div>
         </div>
       </main>
     </div>
@@ -135,11 +143,11 @@ export function ProfileConfirm({
 function InfoBlock({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
   return (
     <div className="flex flex-col gap-[8px]">
-      <p className="font-landing-body text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--ld-text-muted)]">
+      <p className="font-landing-body text-[12px] font-medium uppercase tracking-[0.04em] text-[var(--ld-text-muted)] md:text-[14px]">
         {label}
       </p>
       <p
-        className={`font-landing-body text-[14px] text-[var(--ld-text)] ${strong ? "font-bold" : "font-medium"} break-words`}
+        className={`font-landing-body text-[14px] text-[var(--ld-text)] md:text-[17px] ${strong ? "font-bold" : "font-medium"} break-words`}
       >
         {value}
       </p>

@@ -52,7 +52,7 @@ def _log_config() -> None:
     logger.info("CORS autorisé pour : %s", ALLOWED_ORIGINS)
 
 # CORS — origines pilotées par ALLOWED_ORIGINS (CSV) dans .env
-# Dev : "*" par défaut. Prod : "https://unmask.vercel.app,https://app.unmask.fr"
+# Défaut sûr (localhost + front Vercel), jamais "*". Prod : surcharger via env.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
